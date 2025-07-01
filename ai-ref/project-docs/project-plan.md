@@ -33,7 +33,8 @@ PROJECT PLAN
 - [x] **3.1** Set up Drizzle ORM with Postgres connection in the backend.
 - [x] **3.2** Create initial database schema: users, chatrooms, messages, files, roles.
 - [x] **3.3** Integrate Clerk for authentication (sign up, sign in, user profile).
-- [ ] **3.4** E2E test: User can sign up, sign in, and is persisted in the database.
+- [x] **3.4** E2E test: User can sign up, sign in, and is persisted in the database.
+  - Implemented via a dedicated `/api/sync-user` endpoint and a dashboard client effect that upserts the current Clerk user into the local DB on login. This ensures user persistence without relying on webhooks.
 
 ---
 
