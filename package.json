@@ -1,0 +1,9 @@
+{
+  "name": "proj-one",
+  "dependencies": {},
+  "workspaces": ["packages/*"],
+  "devDependencies": {
+    "@biomejs/biome": "2.0.6",
+    "@types/bun": "^1.2.17"
+  }
+}

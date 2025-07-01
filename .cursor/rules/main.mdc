@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Project structure
+- The project is a monorepo with all apps and internal libs in package directory
+
+# Frameworks/Libs   
+- Always use `Typescript` as the programming language
+- Use `bun` as the package manager for workspace creation, package installation, monorepo, commands etc., refer to docs [bun-docs.md](mdc:ai-ref/external-docs/bun-docs.md)
+- Use `Drizzle` lib for ORM and DB migration with postgres DB [drizzle-docs.md](mdc:ai-ref/external-docs/drizzle-docs.md)
+- Use `Clerk` for auth, refer to docs [clerk-docs.md](mdc:ai-ref/external-docs/clerk-docs.md)
+- Use `NextJS` for backend and frontend, refer to docs [nextjs-docs.md](mdc:ai-ref/external-docs/nextjs-docs.md)
+- Use `zustand` for state management on the frontend, refer to docs [zustand-docs.md](mdc:ai-ref/external-docs/zustand-docs.md)
+- Use `Zod` for schema validation, refer to docs [zod-docs.md](mdc:ai-ref/external-docs/zod-docs.md)
+- Use `AI SDK` for creating chat assistants and integrating with language models, refer to docs [ai-sdk-docs.md](mdc:ai-ref/external-docs/ai-sdk-docs.md)
+- Use `Shadcn` for UI frameowrk and components, refer to docs [shadcn-docs.md](mdc:ai-ref/external-docs/shadcn-docs.md)
+
+# Dev Process
+- When using any framework/lib, first check if its installed
+- Use `Playwright` MCP for using browser to validate changes that affect UI and integration with backend
+- Use `Postgres` MCP server to check schemas and validate migration
+- Always use [project-spec.md](mdc:ai-ref/project-docs/project-spec.md) to understand the overall project requirements 
+- Always use [project-plan.md](mdc:ai-ref/project-docs/project-plan.md) as JIRA to create, update and track implementation of various functionalities 
+- Feel free to ask follow up clarifying questions for better understanding if something in the user request, plan, spec is unclear, vague or ambigious 
+- Do not re-run the dev server as hot-reloading is active
