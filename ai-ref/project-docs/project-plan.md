@@ -35,13 +35,55 @@ PROJECT PLAN
 - [x] **3.3** Integrate Clerk for authentication (sign up, sign in, user profile).
 - [x] **3.4** E2E test: User can sign up, sign in, and is persisted in the database.
   - Implemented via a dedicated `/api/sync-user` endpoint and a dashboard client effect that upserts the current Clerk user into the local DB on login. This ensures user persistence without relying on webhooks.
+- [x] **3.5** Dashboard header displays current user's name, email, and avatar using Clerk data.
+- [x] **3.6** Profile navigation is available in the dashboard dropdown and routes to the profile page.
+- [x] **3.7** Clerk's UserProfile page is centered and styled for a better user experience.
+
+---
+
+### 3A. Dashboard Functionality (Data-Driven)
+
+// In this app, 'sessions' are called 'chatrooms'.
+
+- [x] **3A.1** Data Models (Drizzle ORM + Postgres)
+  - [x] Define/update models for:
+    - User (review for completeness)
+    - Chatroom (collaborative chatroom)
+    - Message (for chatroom chat)
+  - [x] Add relationships:
+    - Users ↔ Chatrooms (many-to-many: participants)
+    - Chatrooms ↔ Messages (one-to-many)
+  - [x] Run and validate DB migrations.
+
+- [x] **3A.2** Backend APIs (Next.js API routes)
+  - [x] Chatrooms
+    - [x] Create chatroom (`POST /api/chatrooms`)
+    - [x] List chatrooms (`GET /api/chatrooms`)
+    - [x] Join chatroom (`POST /api/chatrooms/:id/join`)
+    - [x] Get chatroom details (`GET /api/chatrooms/:id`)
+  - [x] Team Members
+    - [x] List team members in a chatroom (`GET /api/chatrooms/:id/members`)
+  - [x] Messages (for future chat features)
+    - [x] List messages in chatroom (`GET /api/chatrooms/:id/messages`)
+    - [x] Send message (`POST /api/chatrooms/:id/messages`)
+
+- [~] **3A.3** Frontend Integration
+  - [x] Replace all dashboard mock data with real API calls
+  - [x] Implement loading, error, and empty states for each dashboard section
+  - [ ] Use Zustand for dashboard state management
+  - [x] Add optimistic UI updates for chatroom creation/joining
+  - [x] Implement navigation to chatroom details page after creation.
+  - [x] Simplify Dashboard UI (remove stats, filter, specific navigation links, update button text).
+
+- [~] **3A.4** E2E & Integration Testing
+  - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
 
 ---
 
 ### 4. Chatroom Core (MVP)
 
-- [ ] **4.1** Backend: API routes for chatroom creation, joining, and listing.
-- [ ] **4.2** Frontend: UI to create/join/list chatrooms.
+- [x] **4.1** Backend: API routes for chatroom creation, joining, and listing.
+- [x] **4.2** Frontend: UI to create/join/list chatrooms.
 - [ ] **4.3** Presence: Show online users in a room (basic implementation).
 - [ ] **4.4** E2E test: User can create a room, join it, and see themselves listed.
 
