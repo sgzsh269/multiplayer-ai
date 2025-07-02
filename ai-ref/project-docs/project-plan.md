@@ -54,6 +54,7 @@ PROJECT PLAN
     - Users ↔ Chatrooms (many-to-many: participants)
     - Chatrooms ↔ Messages (one-to-many)
   - [x] Run and validate DB migrations.
+  - [x] Add unique constraint to prevent duplicate chatroom memberships (userId, chatroomId).
 
 - [x] **3A.2** Backend APIs (Next.js API routes)
   - [x] Chatrooms
@@ -97,21 +98,28 @@ PROJECT PLAN
 - [x] **5.2** Frontend: Display existing messages in the chatroom UI.
 - [x] **5.3** Frontend: Implement message input and sending functionality.
 - [x] **5.4** Frontend: Real-time chat UI (send/receive messages, show sender info) [PartyKit wired up, tested with live updates].
+- [x] **5.4a** Frontend: Fix message duplication issues between API and PartyKit sources.
+- [x] **5.4b** Frontend: Fix sender identity issues for real-time messages.
+- [x] **5.4c** Frontend: Implement smart auto-scroll (only for message sender, not recipients).
 - [ ] **5.5** Presence: Show who is typing.
 - [ ] **5.7** E2E test: Two users can chat in real time in the same room.
 - [ ] **5.6** Frontend: Implement UI for file and image attachments (paperclip, image buttons).
 
 #### 5A. PartyKit Integration for Real-Time Messaging
 
-- [ ] **5A.1** Backend: Scaffold PartyKit server in `packages/realtime` for chatroom messaging.
-- [ ] **5A.2** Backend: Integrate Drizzle ORM and Clerk auth into PartyKit server for message persistence and user validation.
-- [ ] **5A.3** Backend: Implement PartyKit message broadcast to all connected clients in a chatroom.
+- [x] **5A.1** Backend: Scaffold PartyKit server in `packages/realtime` for chatroom messaging.
+- [x] **5A.2** Backend: Integrate Clerk auth into PartyKit server for user validation (no persistence; auth only).
+- [x] **5A.3** Backend: Implement PartyKit message broadcast to all connected clients in a chatroom (excluding sender to prevent duplicates).
 - [x] **5A.4** Frontend: Connect chatroom UI to PartyKit using `partysocket` for real-time message updates.
 - [x] **5A.5** Frontend: Update chatroom message list in real time as new messages arrive via PartyKit.
 - [x] **5A.6** Frontend: Send new messages through PartyKit (persistence via REST API for now; PartyKit server persistence/auth is next).
+- [x] **5A.6a** Frontend: Fix PartyKit message accumulation and deduplication with API messages.
+- [x] **5A.6b** Frontend: Use current user's Clerk identity for PartyKit connections (not first participant).
 - [ ] **5A.7** Frontend: Show real-time presence (online users) using PartyKit connection state.
 - [ ] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
 - [ ] **5A.9** E2E: Test real-time chat between two users in the same room using Playwright MCP.
+
+[note] Clerk authentication is now enforced for all PartyKit connections and messages. Frontend sends the Clerk session token with every connection and message.
 
 ---
 

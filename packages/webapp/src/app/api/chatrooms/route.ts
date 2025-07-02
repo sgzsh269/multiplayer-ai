@@ -37,30 +37,37 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ chatrooms: [] });
     }
 
-    // Get chatroom details for the memberships, and count participants and messages
-    const userChatrooms = await db
-      .select({
-        id: chatrooms.id,
-        name: chatrooms.name,
-        isPrivate: chatrooms.isPrivate,
-        createdBy: chatrooms.createdBy,
-        createdAt: chatrooms.createdAt,
-        participantCount: count(chatroom_members.userId),
-        messageCount: count(messages.id),
+    // Get chatroom details for the memberships, and count participants and messages accurately
+    const userChatrooms = await Promise.all(
+      chatroomIds.map(async (chatroomId) => {
+        // Get chatroom details
+        const chatroom = await db
+          .select()
+          .from(chatrooms)
+          .where(eq(chatrooms.id, chatroomId));
+        if (!chatroom[0]) return null;
+        // Count participants
+        const [{ count: participantCount }] = await db
+          .select({ count: count() })
+          .from(chatroom_members)
+          .where(eq(chatroom_members.chatroomId, chatroomId));
+        // Count messages
+        const [{ count: messageCount }] = await db
+          .select({ count: count() })
+          .from(messages)
+          .where(eq(messages.chatroomId, chatroomId));
+        return {
+          id: chatroom[0].id,
+          name: chatroom[0].name,
+          isPrivate: chatroom[0].isPrivate,
+          createdBy: chatroom[0].createdBy,
+          createdAt: chatroom[0].createdAt,
+          participantCount,
+          messageCount,
+        };
       })
-      .from(chatrooms)
-      .leftJoin(chatroom_members, eq(chatrooms.id, chatroom_members.chatroomId))
-      .leftJoin(messages, eq(chatrooms.id, messages.chatroomId))
-      .where(inArray(chatrooms.id, chatroomIds))
-      .groupBy(
-        chatrooms.id,
-        chatrooms.name,
-        chatrooms.isPrivate,
-        chatrooms.createdBy,
-        chatrooms.createdAt
-      );
-
-    return NextResponse.json({ chatrooms: userChatrooms });
+    );
+    return NextResponse.json({ chatrooms: userChatrooms.filter(Boolean) });
   } catch (error) {
     console.error("Error listing chatrooms:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

@@ -1,5 +1,13 @@
 // Drizzle ORM schema for collaborative AI playground
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  integer,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -36,9 +44,15 @@ export const files = pgTable("files", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const chatroom_members = pgTable("chatroom_members", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  chatroomId: integer("chatroom_id").notNull(),
-  role: text("role").notNull(), // e.g., admin, guest
-});
+export const chatroom_members = pgTable(
+  "chatroom_members",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    chatroomId: integer("chatroom_id").notNull(),
+    role: text("role").notNull(), // e.g., admin, guest
+  },
+  (table) => [
+    uniqueIndex("unique_user_chatroom").on(table.userId, table.chatroomId),
+  ]
+);

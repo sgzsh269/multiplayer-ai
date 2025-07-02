@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import PartySocket from "partysocket";
+import { useAuth } from "@clerk/nextjs";
 
 export interface PartyMessage {
   type: string;
@@ -7,6 +8,8 @@ export interface PartyMessage {
   sentAt: number;
   user: string;
   senderId?: string;
+  userId?: string;
+  displayName?: string;
   roomId?: string;
   receivedAt?: number;
 }
@@ -20,39 +23,54 @@ export function usePartySocket({
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const connRef = useRef<PartySocket | null>(null);
+  const { getToken, isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (!chatroomId || !user) return;
-    const conn = new PartySocket({
-      host: process.env.NEXT_PUBLIC_PARTYKIT_HOST!,
-      room: chatroomId,
-    });
-    connRef.current = conn;
-
-    conn.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setMessages((prev) => [...prev, data]);
-      } catch (e) {
-        // ignore malformed
-      }
-    });
+    if (!chatroomId || !user || !isLoaded || !isSignedIn) return;
+    let conn: PartySocket | null = null;
+    let isMounted = true;
+    (async () => {
+      const token = await getToken();
+      if (!token) return;
+      conn = new PartySocket({
+        host: process.env.NEXT_PUBLIC_PARTYKIT_HOST!,
+        room: chatroomId,
+        query: { token },
+      });
+      connRef.current = conn;
+      conn.addEventListener("message", (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (isMounted) setMessages((prev) => [...prev, data]);
+        } catch (e) {
+          // ignore malformed
+        }
+      });
+    })();
     return () => {
-      conn.close();
+      isMounted = false;
+      if (conn) conn.close();
     };
-  }, [chatroomId, user]);
+  }, [chatroomId, user, isLoaded, isSignedIn, getToken]);
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!connRef.current) return;
+    const token = await getToken();
+    if (!token) return;
     connRef.current.send(
       JSON.stringify({
         type: "chat-message",
         text,
         sentAt: Date.now(),
         user,
+        token,
       })
     );
   };
 
-  return { messages, sendMessage };
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  return { messages, sendMessage, clearMessages };
 }

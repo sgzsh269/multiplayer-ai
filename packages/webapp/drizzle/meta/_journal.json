@@ -15,6 +15,13 @@
       "when": 1751430844583,
       "tag": "0001_fluffy_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751467424240,
+      "tag": "0002_wonderful_carmella_unuscione",
+      "breakpoints": true
     }
   ]
 }

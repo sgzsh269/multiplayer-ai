@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { auth } from "@clerk/nextjs/server";
 
 const userSchema = z.object({
   clerkId: z.string(),
@@ -12,12 +13,25 @@ const userSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify the user is authenticated
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = userSchema.safeParse(body);
     if (!parsed.success) {
       return new Response("Invalid user data", { status: 400 });
     }
     const { clerkId, displayName, avatarUrl } = parsed.data;
+
+    // Ensure the authenticated user can only sync their own data
+    if (clerkUserId !== clerkId) {
+      return new Response("Forbidden: Can only sync own user data", {
+        status: 403,
+      });
+    }
 
     // Check if user exists
     const existing = await db

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "unique_user_chatroom" ON "chatroom_members" USING btree ("user_id","chatroom_id");

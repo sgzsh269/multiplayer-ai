@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import React from "react";
 import { usePartySocket, PartyMessage } from "@/lib/usePartySocket";
+import { useUser } from "@clerk/nextjs";
 
 interface Participant {
   id: string;
@@ -75,6 +76,7 @@ export default function ChatroomDetailPage({
 }) {
   const router = useRouter();
   const [chatroomId, setChatroomId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -102,6 +104,7 @@ export default function ChatroomDetailPage({
 
   const [messageInput, setMessageInput] = useState("");
   const queryClient = useQueryClient();
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -118,31 +121,89 @@ export default function ChatroomDetailPage({
     onSuccess: () => {
       // Invalidate the chatroom messages query to refetch data
       queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
-      setMessageInput(""); // Clear the input after sending
     },
   });
 
-  // Add PartyKit real-time messaging
-  const { messages: partyMessages, sendMessage: sendPartyMessage } =
-    usePartySocket({
-      chatroomId: chatroomId || "",
-      user: chatroom?.participants[0]?.name || "Demo User",
-    });
+  const { user: clerkUser } = useUser();
+  const displayName =
+    clerkUser?.firstName ||
+    clerkUser?.username ||
+    clerkUser?.emailAddresses?.[0]?.emailAddress ||
+    "User";
 
-  // Combine API and PartyKit messages (for demo, just concat, deduplication can be added later)
-  const allMessages = [
-    ...(chatroom?.messages || []),
-    ...partyMessages.map((m, i) => ({
-      id: `realtime-${i}`,
-      sender: {
-        id: m.user,
-        name: m.user,
-        avatarInitials: m.user.slice(0, 2).toUpperCase(),
-      },
-      timestamp: m.sentAt ? new Date(m.sentAt).toLocaleTimeString() : "",
-      content: m.text,
-    })),
-  ];
+  // Add PartyKit real-time messaging
+  const {
+    messages: partyMessages,
+    sendMessage: sendPartyMessage,
+    clearMessages,
+  } = usePartySocket({
+    chatroomId: chatroomId || "",
+    user: displayName,
+  });
+
+  // Clear PartyKit messages when chatroom data changes (to prevent accumulation)
+  useEffect(() => {
+    if (chatroom) {
+      // Reset PartyKit messages when we get fresh API data
+      // This prevents infinite accumulation of real-time messages
+      clearMessages();
+    }
+  }, [chatroom, clearMessages]);
+
+  // Combine API and PartyKit messages with deduplication
+  const messageMap = new Map<string, any>();
+
+  // Add API messages first
+  (chatroom?.messages || []).forEach((msg) => {
+    const key = `${msg.sender.id}-${msg.timestamp}-${msg.content}`;
+    messageMap.set(key, { ...msg, _source: "api" });
+  });
+
+  // Add PartyKit messages, avoiding duplicates
+  partyMessages.forEach((m, i) => {
+    const key = `${m.userId || m.user}-${
+      m.sentAt ? new Date(m.sentAt).toLocaleTimeString() : ""
+    }-${m.text}`;
+    if (!messageMap.has(key)) {
+      messageMap.set(key, {
+        id: m.sentAt ? `realtime-${m.sentAt}` : `realtime-${i}`,
+        sender: {
+          id: m.userId || m.user,
+          name: m.displayName || m.user || "User",
+          avatarInitials: (m.displayName
+            ? m.displayName
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+            : m.user?.slice(0, 2) || "U"
+          ).toUpperCase(),
+        },
+        timestamp: m.sentAt ? new Date(m.sentAt).toLocaleTimeString() : "",
+        content: m.text,
+        _source: "realtime",
+      });
+    }
+  });
+
+  const allMessages = Array.from(messageMap.values());
+
+  // Auto-scroll to bottom only when the current user sends a message
+  useEffect(() => {
+    if (shouldAutoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShouldAutoScroll(false); // Reset the flag
+    }
+  }, [allMessages.length, shouldAutoScroll]);
+
+  // Helper function to handle sending messages
+  const handleSendMessage = () => {
+    if (messageInput.trim()) {
+      setShouldAutoScroll(true); // Mark for auto-scroll
+      sendMessageMutation.mutate(messageInput.trim());
+      sendPartyMessage(messageInput.trim());
+      setMessageInput("");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -181,35 +242,17 @@ export default function ChatroomDetailPage({
             <UserPlus className="w-4 h-4 mr-2" />
             Invite
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="px-2">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Option 1</DropdownMenuItem>
-              <DropdownMenuItem>Option 2</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Chat Content */}
         <main className="flex-1 flex flex-col bg-white border-r">
-          {/* Welcome Banner */}
-          <div className="p-4 bg-blue-50 border-b border-blue-200 text-blue-700 text-sm text-center">
-            Welcome to your collaborative AI session! Team members can now
-            interact with AI together in real-time.
-            <div className="text-xs text-blue-500 mt-1">11:12 AM</div>
-          </div>
-
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {allMessages.map((message) => (
+            {allMessages.map((message, index) => (
               <div
-                key={message.id}
+                key={`${message._source}-${message.id}`}
                 className={`flex items-start space-x-3 ${
                   message.sender.id === "ai"
                     ? "flex-row-reverse space-x-reverse"
@@ -251,6 +294,8 @@ export default function ChatroomDetailPage({
                 </div>
               </div>
             ))}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Message Input */}
@@ -264,11 +309,7 @@ export default function ChatroomDetailPage({
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    if (messageInput.trim()) {
-                      sendMessageMutation.mutate(messageInput.trim());
-                      sendPartyMessage(messageInput.trim());
-                    }
-                    setMessageInput("");
+                    handleSendMessage();
                   }
                 }}
               />
@@ -280,12 +321,7 @@ export default function ChatroomDetailPage({
               </Button>
               <Button
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                onClick={() => {
-                  if (messageInput.trim()) {
-                    sendMessageMutation.mutate(messageInput.trim());
-                    sendPartyMessage(messageInput.trim());
-                  }
-                }}
+                onClick={handleSendMessage}
               >
                 <Send className="w-5 h-5" />
               </Button>
@@ -349,60 +385,6 @@ export default function ChatroomDetailPage({
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Session Info */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Session Info
-            </h2>
-            <div className="space-y-2 text-sm text-gray-700">
-              <div className="flex justify-between">
-                <span>Started:</span>
-                <span className="font-medium">
-                  {chatroom.sessionInfo.started}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Messages:</span>
-                <span className="font-medium">
-                  {chatroom.sessionInfo.messages}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Files shared:</span>
-                <span className="font-medium">
-                  {chatroom.sessionInfo.filesShared}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>AI interactions:</span>
-                <span className="font-medium">
-                  {chatroom.sessionInfo.aiInteractions}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Quick Actions */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Quick Actions
-            </h2>
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Export Session
-              </Button>
-              <Button variant="outline" className="w-full">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Session
-              </Button>
             </div>
           </div>
         </aside>
