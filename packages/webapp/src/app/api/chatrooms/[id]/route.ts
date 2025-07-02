@@ -76,18 +76,20 @@ export async function GET(
       .innerJoin(users, eq(chatroom_members.userId, users.id))
       .where(eq(chatroom_members.chatroomId, chatroomId));
 
-    // Get messages for the chatroom with sender information
+    // Get messages for the chatroom with sender information (including AI messages)
     const chatroomMessages = await db
       .select({
         id: messages.id,
         content: messages.content,
         createdAt: messages.createdAt,
+        isAiMessage: messages.isAiMessage,
+        aiModel: messages.aiModel,
         senderId: users.id,
         senderDisplayName: users.displayName,
         senderAvatarUrl: users.avatarUrl,
       })
       .from(messages)
-      .innerJoin(users, eq(messages.userId, users.id))
+      .leftJoin(users, eq(messages.userId, users.id)) // Use leftJoin to include AI messages
       .where(eq(messages.chatroomId, chatroomId))
       .orderBy(messages.createdAt);
 
@@ -115,22 +117,25 @@ export async function GET(
 
     const formattedMessages = chatroomMessages.map((msg) => ({
       id: msg.id,
-      sender: {
-        id: msg.senderId,
-        name: msg.senderDisplayName,
-        avatarInitials: msg.senderDisplayName
-          ? msg.senderDisplayName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-          : "",
-      },
+      sender: msg.isAiMessage
+        ? {
+            id: "ai-assistant",
+            name: "AI Assistant",
+            avatarUrl: null,
+          }
+        : {
+            id: msg.senderId,
+            name: msg.senderDisplayName,
+            avatarUrl: msg.senderAvatarUrl,
+          },
+      createdAt: msg.createdAt,
       timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
       content: msg.content,
+      isAiMessage: msg.isAiMessage,
+      aiModel: msg.aiModel,
     }));
 
     // Calculate startedAgo
@@ -153,6 +158,10 @@ export async function GET(
           messages: messagesCount,
           filesShared: filesShared,
           aiInteractions: aiInteractions,
+        },
+        aiSettings: {
+          aiMode: chatroom.aiMode,
+          aiEnabled: chatroom.aiEnabled,
         },
       },
     });

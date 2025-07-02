@@ -25,15 +25,17 @@ export async function GET(
         id: messages.id,
         content: messages.content,
         createdAt: messages.createdAt,
+        isAiMessage: messages.isAiMessage,
+        aiModel: messages.aiModel,
         sender: {
           id: users.id,
-          name: users.name,
-          avatarInitials: users.avatarInitials,
+          name: users.displayName,
+          avatarUrl: users.avatarUrl,
         },
       })
       .from(messages)
       .leftJoin(users, eq(messages.userId, users.id))
-      .where(eq(messages.chatroomId, chatroomId))
+      .where(eq(messages.chatroomId, parseInt(chatroomId)))
       .orderBy(asc(messages.createdAt));
 
     return NextResponse.json({ messages: chatMessages });
@@ -53,9 +55,9 @@ export async function POST(
   const { params } = await context;
   const { userId } = await auth();
 
-  const { id } = await params
+  const { id } = await params;
   const chatroomId = id;
-  
+
   const { content } = await req.json();
 
   if (!userId) {
@@ -78,7 +80,7 @@ export async function POST(
     const newMessage = await db
       .insert(messages)
       .values({
-        chatroomId: chatroomId,
+        chatroomId: parseInt(chatroomId),
         userId: user[0].id,
         content: content,
       })

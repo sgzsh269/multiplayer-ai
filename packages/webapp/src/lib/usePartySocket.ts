@@ -12,6 +12,7 @@ export interface PartyMessage {
   displayName?: string;
   roomId?: string;
   receivedAt?: number;
+  isAiMessage?: boolean;
 }
 
 export function usePartySocket({
@@ -53,16 +54,19 @@ export function usePartySocket({
     };
   }, [chatroomId, user, isLoaded, isSignedIn, getToken]);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, isAiMessage = false) => {
     if (!connRef.current) return;
     const token = await getToken();
     if (!token) return;
     connRef.current.send(
       JSON.stringify({
-        type: "chat-message",
+        type: isAiMessage ? "ai-message" : "chat-message",
         text,
         sentAt: Date.now(),
-        user,
+        user: isAiMessage ? "AI Assistant" : user,
+        userId: isAiMessage ? "ai-assistant" : undefined,
+        displayName: isAiMessage ? "AI Assistant" : user,
+        isAiMessage,
         token,
       })
     );

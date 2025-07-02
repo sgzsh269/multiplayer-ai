@@ -1,0 +1,123 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/db/client";
+import { chatrooms, chatroom_members, users } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+
+export async function GET(
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
+) {
+  const { params } = await context;
+  const { userId } = await auth();
+  const chatroomId = parseInt(params.id);
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const chatroom = await db
+      .select({
+        aiMode: chatrooms.aiMode,
+        aiEnabled: chatrooms.aiEnabled,
+      })
+      .from(chatrooms)
+      .where(eq(chatrooms.id, chatroomId))
+      .limit(1);
+
+    if (!chatroom[0]) {
+      return NextResponse.json(
+        { error: "Chatroom not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ settings: chatroom[0] });
+  } catch (error) {
+    console.error("Error fetching chatroom settings:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch chatroom settings" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
+) {
+  const { params } = await context;
+  const { userId } = await auth();
+  const chatroomId = parseInt(params.id);
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { aiMode, aiEnabled } = await req.json();
+
+  // Validate aiMode
+  if (aiMode && !["reactive", "summoned"].includes(aiMode)) {
+    return NextResponse.json(
+      { error: "Invalid AI mode. Must be 'reactive' or 'summoned'" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Get user from Clerk ID
+    const user = await db.select().from(users).where(eq(users.clerkId, userId));
+    if (!user[0]) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user is a member of the chatroom (basic permission check)
+    const membership = await db
+      .select()
+      .from(chatroom_members)
+      .where(
+        and(
+          eq(chatroom_members.chatroomId, chatroomId),
+          eq(chatroom_members.userId, user[0].id)
+        )
+      )
+      .limit(1);
+
+    if (!membership[0]) {
+      return NextResponse.json(
+        { error: "Not authorized to modify this chatroom" },
+        { status: 403 }
+      );
+    }
+
+    // Update chatroom settings
+    const updateData: any = {};
+    if (aiMode !== undefined) updateData.aiMode = aiMode;
+    if (aiEnabled !== undefined) updateData.aiEnabled = aiEnabled;
+
+    const updatedChatroom = await db
+      .update(chatrooms)
+      .set(updateData)
+      .where(eq(chatrooms.id, chatroomId))
+      .returning({
+        aiMode: chatrooms.aiMode,
+        aiEnabled: chatrooms.aiEnabled,
+      });
+
+    if (!updatedChatroom[0]) {
+      return NextResponse.json(
+        { error: "Chatroom not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ settings: updatedChatroom[0] });
+  } catch (error) {
+    console.error("Error updating chatroom settings:", error);
+    return NextResponse.json(
+      { error: "Failed to update chatroom settings" },
+      { status: 500 }
+    );
+  }
+}

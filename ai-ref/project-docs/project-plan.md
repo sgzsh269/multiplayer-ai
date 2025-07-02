@@ -125,10 +125,30 @@ PROJECT PLAN
 
 ### 6. AI Assistant Integration
 
-- [ ] **6.1** Integrate AI SDK in backend for chatroom assistant.
-- [ ] **6.2** Frontend: UI for AI messages, allow users to address AI.
+- [x] **6.1** Integrate AI SDK in backend for chatroom assistant.
+  - [x] AI API route for generating responses with conversation context
+  - [x] Settings API route for managing AI mode (reactive/summoned)
+  - [x] Database schema updated to support AI messages and settings
+  - [x] OpenAI provider installed and configured
+- [x] **6.2** Frontend: UI for AI messages, allow users to address AI.
+  - [x] AI messages display with distinctive styling (purple gradient)
+  - [x] AI mode toggle in chatroom header (reactive vs summoned)
+  - [x] @AI mention detection and triggering
+  - [x] Dynamic message input placeholder based on AI mode
+  - [x] AI status indicator showing current mode
 - [ ] **6.3** Threaded replies support (basic).
 - [ ] **6.4** E2E test: User can ask AI a question in a room and get a response.
+
+#### 6A. AI Assistant Features Implemented
+
+- [x] **6A.1** Reactive Mode: AI responds to every user message automatically
+- [x] **6A.2** Summoned Mode: AI only responds when @AI is mentioned
+- [x] **6A.3** AI message persistence and real-time updates via PartyKit
+- [x] **6A.4** Conversation context awareness (last 10 messages)
+- [x] **6A.5** AI settings management per chatroom
+- [x] **6A.6** Distinctive UI for AI messages with emoji avatar and styling
+
+**Note:** Requires `OPENAI_API_KEY` in `.env.local` file to function.
 
 ---
 

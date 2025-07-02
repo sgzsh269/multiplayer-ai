@@ -7,6 +7,7 @@ import {
   integer,
   unique,
   uniqueIndex,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -23,15 +24,21 @@ export const chatrooms = pgTable("chatrooms", {
   isPrivate: integer("is_private").default(0),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // AI Assistant settings
+  aiMode: text("ai_mode").default("reactive").notNull(), // "reactive" or "summoned"
+  aiEnabled: boolean("ai_enabled").default(true).notNull(),
 });
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   chatroomId: integer("chatroom_id").notNull(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id"), // null for AI messages
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   parentId: integer("parent_id"), // for threaded replies
+  // AI message metadata
+  isAiMessage: boolean("is_ai_message").default(false).notNull(),
+  aiModel: text("ai_model"), // which AI model was used
 });
 
 export const files = pgTable("files", {

@@ -48,10 +48,13 @@ interface Message {
   sender: {
     id: string;
     name: string;
-    avatarInitials: string;
-  };
-  timestamp: string;
+    avatarUrl?: string;
+  } | null;
+  timestamp?: string;
+  createdAt?: string;
   content: string;
+  isAiMessage?: boolean;
+  aiModel?: string;
 }
 
 interface ChatroomDetails {
@@ -66,6 +69,10 @@ interface ChatroomDetails {
     messages: number;
     filesShared: number;
     aiInteractions: number;
+  };
+  aiSettings?: {
+    aiMode: "reactive" | "summoned";
+    aiEnabled: boolean;
   };
 }
 
@@ -105,6 +112,10 @@ export default function ChatroomDetailPage({
   const [messageInput, setMessageInput] = useState("");
   const queryClient = useQueryClient();
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
+  const [aiSettings, setAiSettings] = useState({
+    aiMode: "reactive" as "reactive" | "summoned",
+    aiEnabled: true,
+  });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -121,6 +132,56 @@ export default function ChatroomDetailPage({
     onSuccess: () => {
       // Invalidate the chatroom messages query to refetch data
       queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+    },
+  });
+
+  const aiResponseMutation = useMutation({
+    mutationFn: async ({
+      message,
+      triggerType,
+    }: {
+      message: string;
+      triggerType: string;
+    }) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/ai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message, triggerType }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to get AI response");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      // Auto-scroll to show AI response
+      setShouldAutoScroll(true);
+
+      // Broadcast AI response through PartyKit for real-time updates
+      if (data.aiResponse) {
+        // Use the existing sendMessage function to broadcast AI response
+        sendPartyMessage(data.aiResponse, true); // Pass isAiMessage flag
+      }
+    },
+  });
+
+  const updateAiSettingsMutation = useMutation({
+    mutationFn: async (settings: { aiMode?: string; aiEnabled?: boolean }) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error("Failed to update AI settings");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAiSettings(data.settings);
     },
   });
 
@@ -147,6 +208,11 @@ export default function ChatroomDetailPage({
       // Reset PartyKit messages when we get fresh API data
       // This prevents infinite accumulation of real-time messages
       clearMessages();
+
+      // Load AI settings if available
+      if (chatroom.aiSettings) {
+        setAiSettings(chatroom.aiSettings);
+      }
     }
   }, [chatroom, clearMessages]);
 
@@ -155,8 +221,20 @@ export default function ChatroomDetailPage({
 
   // Add API messages first
   (chatroom?.messages || []).forEach((msg) => {
-    const key = `${msg.sender.id}-${msg.timestamp}-${msg.content}`;
-    messageMap.set(key, { ...msg, _source: "api" });
+    const senderId = msg.isAiMessage
+      ? "ai-assistant"
+      : msg.sender?.id || "unknown";
+    // Fix timestamp mapping - API returns createdAt
+    const timestamp = msg.createdAt || msg.timestamp;
+    const key = `${senderId}-${timestamp}-${msg.content}`;
+    messageMap.set(key, {
+      ...msg,
+      timestamp: timestamp ? new Date(timestamp).toLocaleTimeString() : "",
+      _source: "api",
+      sender: msg.isAiMessage
+        ? { id: "ai-assistant", name: "AI Assistant", avatarUrl: null }
+        : msg.sender,
+    });
   });
 
   // Add PartyKit messages, avoiding duplicates
@@ -170,16 +248,11 @@ export default function ChatroomDetailPage({
         sender: {
           id: m.userId || m.user,
           name: m.displayName || m.user || "User",
-          avatarInitials: (m.displayName
-            ? m.displayName
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-            : m.user?.slice(0, 2) || "U"
-          ).toUpperCase(),
+          avatarUrl: null,
         },
         timestamp: m.sentAt ? new Date(m.sentAt).toLocaleTimeString() : "",
         content: m.text,
+        isAiMessage: m.isAiMessage || false,
         _source: "realtime",
       });
     }
@@ -199,9 +272,30 @@ export default function ChatroomDetailPage({
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       setShouldAutoScroll(true); // Mark for auto-scroll
-      sendMessageMutation.mutate(messageInput.trim());
-      sendPartyMessage(messageInput.trim());
+      const content = messageInput.trim();
+
+      // Send the user message
+      sendMessageMutation.mutate(content);
+      sendPartyMessage(content);
       setMessageInput("");
+
+      // Check if AI should respond
+      const hasAiMention = content.toLowerCase().includes("@ai");
+      const shouldTriggerAi =
+        aiSettings.aiEnabled &&
+        (aiSettings.aiMode === "reactive" ||
+          (aiSettings.aiMode === "summoned" && hasAiMention));
+
+      if (shouldTriggerAi) {
+        // Trigger AI response with a small delay to ensure user message is processed first
+        setTimeout(() => {
+          const triggerType = hasAiMention ? "mention" : "reactive";
+          aiResponseMutation.mutate({
+            message: content,
+            triggerType,
+          });
+        }, 200);
+      }
     }
   };
 
@@ -238,6 +332,61 @@ export default function ChatroomDetailPage({
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {/* AI Status & Controls */}
+          <div className="flex items-center space-x-2 px-3 py-1 bg-purple-50 rounded-lg border border-purple-200">
+            <Brain className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-700">
+              AI{" "}
+              {aiSettings.aiEnabled
+                ? aiSettings.aiMode === "reactive"
+                  ? "Reactive"
+                  : "Summoned"
+                : "Off"}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-1 text-purple-600"
+                >
+                  <MoreHorizontal className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateAiSettingsMutation.mutate({
+                      aiEnabled: !aiSettings.aiEnabled,
+                    })
+                  }
+                >
+                  {aiSettings.aiEnabled ? "Disable" : "Enable"} AI Assistant
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateAiSettingsMutation.mutate({ aiMode: "reactive" })
+                  }
+                  className={
+                    aiSettings.aiMode === "reactive" ? "bg-purple-50" : ""
+                  }
+                >
+                  Reactive Mode (Auto-respond)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateAiSettingsMutation.mutate({ aiMode: "summoned" })
+                  }
+                  className={
+                    aiSettings.aiMode === "summoned" ? "bg-purple-50" : ""
+                  }
+                >
+                  Summoned Mode (@AI only)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <Button variant="outline" size="sm">
             <UserPlus className="w-4 h-4 mr-2" />
             Invite
@@ -250,50 +399,72 @@ export default function ChatroomDetailPage({
         <main className="flex-1 flex flex-col bg-white border-r">
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {allMessages.map((message, index) => (
-              <div
-                key={`${message._source}-${message.id}`}
-                className={`flex items-start space-x-3 ${
-                  message.sender.id === "ai"
-                    ? "flex-row-reverse space-x-reverse"
-                    : ""
-                }`}
-              >
-                <Avatar>
-                  <AvatarFallback>
-                    {message.sender.avatarInitials}
-                  </AvatarFallback>
-                </Avatar>
+            {allMessages.map((message, index) => {
+              const isAiMessage =
+                message.isAiMessage || message.sender?.id === "ai-assistant";
+              const senderName = message.sender?.name || "Unknown User";
+              const avatarInitials =
+                senderName
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2) || "U";
+
+              return (
                 <div
-                  className={`flex-1 ${
-                    message.sender.id === "ai" ? "text-right" : "text-left"
-                  }`}
+                  key={`${message._source}-${message.id}`}
+                  className="flex items-start space-x-3"
                 >
-                  <div className="flex items-center px-1">
-                    <span className="font-semibold text-gray-900">
-                      {message.sender.name}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {message.timestamp}
-                    </span>
-                  </div>
-                  <Card
-                    className={`mt-1 max-w-[60%] py-0 ${
-                      message.sender.id === "ai"
-                        ? "bg-purple-50 text-purple-800 ml-auto"
-                        : "bg-gray-100"
-                    }`}
+                  <Avatar
+                    className={
+                      isAiMessage
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                        : ""
+                    }
                   >
-                    <CardContent className="p-0 text-sm">
-                      <div
-                        className="m-0 p-1 leading-tight *:my-0"
-                        dangerouslySetInnerHTML={{ __html: message.content }}
-                      />
-                    </CardContent>
-                  </Card>
+                    <AvatarFallback
+                      className={isAiMessage ? "text-white bg-transparent" : ""}
+                    >
+                      {isAiMessage ? "🤖" : avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center px-1 gap-2">
+                      <span
+                        className={`font-semibold ${
+                          isAiMessage ? "text-purple-700" : "text-gray-900"
+                        }`}
+                      >
+                        {senderName}
+                      </span>
+                      {isAiMessage && (
+                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+                          AI Assistant
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500">
+                        {message.timestamp}
+                      </span>
+                    </div>
+                    <Card
+                      className={`mt-1 max-w-[60%] py-0 ${
+                        isAiMessage
+                          ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-800 border-purple-200"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      <CardContent className="p-0 text-sm">
+                        <div
+                          className="m-0 p-3 leading-tight *:my-0"
+                          dangerouslySetInnerHTML={{ __html: message.content }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {/* Invisible element to scroll to */}
             <div ref={messagesEndRef} />
           </div>
@@ -302,7 +473,13 @@ export default function ChatroomDetailPage({
           <div className="border-t p-4 bg-white">
             <div className="flex items-center space-x-2">
               <Input
-                placeholder="Type your message to collaborate with AI and your team..."
+                placeholder={
+                  aiSettings.aiEnabled
+                    ? aiSettings.aiMode === "reactive"
+                      ? "Type your message - AI will respond automatically..."
+                      : "Type your message or @AI to get AI assistance..."
+                    : "Type your message to collaborate with your team..."
+                }
                 className="flex-1"
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
