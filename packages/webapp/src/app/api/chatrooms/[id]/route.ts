@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { chatrooms, chatroom_members, users, messages } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
+  const { params } = await context;
+
+  const { id } = await params;
+  const chatroomId = Number(id);
+
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const chatroomId = Number(params.id);
     if (isNaN(chatroomId)) {
       return NextResponse.json(
         { error: "Invalid Chatroom ID" },
@@ -60,7 +64,7 @@ export async function GET(
       );
     }
 
-    // Get chatroom members with their display names
+    // Get chatroom members with their display names, assuming all are online for MVP
     const chatroomMembers = await db
       .select({
         id: users.id,
@@ -72,18 +76,84 @@ export async function GET(
       .innerJoin(users, eq(chatroom_members.userId, users.id))
       .where(eq(chatroom_members.chatroomId, chatroomId));
 
-    // Get messages for the chatroom
+    // Get messages for the chatroom with sender information
     const chatroomMessages = await db
-      .select()
+      .select({
+        id: messages.id,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        senderId: users.id,
+        senderDisplayName: users.displayName,
+        senderAvatarUrl: users.avatarUrl,
+      })
       .from(messages)
+      .innerJoin(users, eq(messages.userId, users.id))
       .where(eq(messages.chatroomId, chatroomId))
       .orderBy(messages.createdAt);
 
+    // Calculate additional info for session info
+    const participantsActive = chatroomMembers.length;
+    const messagesCount = chatroomMessages.length;
+    const filesShared = 0; // TODO: Implement file sharing logic and count
+    const aiInteractions = 0; // TODO: Implement AI interaction tracking
+
+    // Format timestamps and avatar initials
+    const formattedParticipants = chatroomMembers.map((p) => ({
+      id: p.id,
+      name: p.displayName,
+      role: p.role,
+      isOnline: true, // Mock for MVP
+      isTyping: false, // Mock for MVP
+      avatarInitials: p.displayName
+        ? p.displayName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+        : "",
+    }));
+
+    const formattedMessages = chatroomMessages.map((msg) => ({
+      id: msg.id,
+      sender: {
+        id: msg.senderId,
+        name: msg.senderDisplayName,
+        avatarInitials: msg.senderDisplayName
+          ? msg.senderDisplayName
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+          : "",
+      },
+      timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      content: msg.content,
+    }));
+
+    // Calculate startedAgo
+    const startedDate = new Date(chatroom.createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - startedDate.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const startedAgo = diffHours > 0 ? `${diffHours} hours ago` : "just now";
+
     return NextResponse.json({
       chatroom: {
-        ...chatroom,
-        members: chatroomMembers,
-        messages: chatroomMessages,
+        id: chatroom.id,
+        name: chatroom.name,
+        startedAgo: startedAgo,
+        participantsActive: participantsActive,
+        participants: formattedParticipants,
+        messages: formattedMessages,
+        sessionInfo: {
+          started: startedDate.toLocaleString(),
+          messages: messagesCount,
+          filesShared: filesShared,
+          aiInteractions: aiInteractions,
+        },
       },
     });
   } catch (error) {

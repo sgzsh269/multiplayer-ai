@@ -5,9 +5,10 @@ import { auth } from "@clerk/nextjs/server";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
+  const { params } = await context;
   try {
     const { userId } = await auth();
     if (!userId)

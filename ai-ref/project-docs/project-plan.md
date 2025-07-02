@@ -67,7 +67,7 @@ PROJECT PLAN
     - [x] List messages in chatroom (`GET /api/chatrooms/:id/messages`)
     - [x] Send message (`POST /api/chatrooms/:id/messages`)
 
-- [~] **3A.3** Frontend Integration
+- [x] **3A.3** Frontend Integration
   - [x] Replace all dashboard mock data with real API calls
   - [x] Implement loading, error, and empty states for each dashboard section
   - [ ] Use Zustand for dashboard state management
@@ -75,7 +75,7 @@ PROJECT PLAN
   - [x] Implement navigation to chatroom details page after creation.
   - [x] Simplify Dashboard UI (remove stats, filter, specific navigation links, update button text).
 
-- [~] **3A.4** E2E & Integration Testing
+- [ ] **3A.4** E2E & Integration Testing
 -   - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
 
 ---
@@ -84,17 +84,34 @@ PROJECT PLAN
 
 - [x] **4.1** Backend: API routes for chatroom creation, joining, and listing.
 - [x] **4.2** Frontend: UI to create/join/list chatrooms.
-- [ ] **4.3** Presence: Show online users in a room (basic implementation).
-- [ ] **4.4** E2E test: User can create a room, join it, and see themselves listed.
+- [x] **4.3** Frontend: Fetch and display chatroom details (name, started ago, active participants).
+- [x] **4.4** Frontend: Display participants list in the chatroom sidebar.
+- [ ] **4.5** Presence: Show online users in a room (basic implementation).
+- [ ] **4.6** E2E test: User can create a room, join it, and see themselves listed.
 
 ---
 
 ### 5. Real-Time Messaging
 
-- [ ] **5.1** Backend: API for sending/receiving messages (with basic persistence).
-- [ ] **5.2** Frontend: Real-time chat UI (send/receive messages, show sender info).
-- [ ] **5.3** Presence: Show who is typing.
-- [ ] **5.4** E2E test: Two users can chat in real time in the same room.
+- [x] **5.1** Backend: API for sending/receiving messages (with basic persistence).
+- [x] **5.2** Frontend: Display existing messages in the chatroom UI.
+- [x] **5.3** Frontend: Implement message input and sending functionality.
+- [x] **5.4** Frontend: Real-time chat UI (send/receive messages, show sender info) [PartyKit wired up, tested with live updates].
+- [ ] **5.5** Presence: Show who is typing.
+- [ ] **5.7** E2E test: Two users can chat in real time in the same room.
+- [ ] **5.6** Frontend: Implement UI for file and image attachments (paperclip, image buttons).
+
+#### 5A. PartyKit Integration for Real-Time Messaging
+
+- [ ] **5A.1** Backend: Scaffold PartyKit server in `packages/realtime` for chatroom messaging.
+- [ ] **5A.2** Backend: Integrate Drizzle ORM and Clerk auth into PartyKit server for message persistence and user validation.
+- [ ] **5A.3** Backend: Implement PartyKit message broadcast to all connected clients in a chatroom.
+- [x] **5A.4** Frontend: Connect chatroom UI to PartyKit using `partysocket` for real-time message updates.
+- [x] **5A.5** Frontend: Update chatroom message list in real time as new messages arrive via PartyKit.
+- [x] **5A.6** Frontend: Send new messages through PartyKit (persistence via REST API for now; PartyKit server persistence/auth is next).
+- [ ] **5A.7** Frontend: Show real-time presence (online users) using PartyKit connection state.
+- [ ] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
+- [ ] **5A.9** E2E: Test real-time chat between two users in the same room using Playwright MCP.
 
 ---
 
@@ -150,6 +167,9 @@ PROJECT PLAN
 ---
 
 ### 12. E2E & Integration Testing
+
   - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
 
 // Each task above is designed to deliver a testable, end-to-end user flow.
+
+[note] Next.js 15 dynamic API route param handling (`params` as Promise) was updated and tested in all relevant API routes.

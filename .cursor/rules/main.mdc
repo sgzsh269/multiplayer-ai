@@ -17,6 +17,7 @@ alwaysApply: true
 - Use `Zod` for schema validation, refer to docs [zod-docs.md](mdc:ai-ref/external-docs/zod-docs.md)
 - Use `AI SDK` for creating chat assistants and integrating with language models, refer to docs [ai-sdk-docs.md](mdc:ai-ref/external-docs/ai-sdk-docs.md)
 - Use `Shadcn` for UI frameowrk and components, refer to docs [shadcn-docs.md](mdc:ai-ref/external-docs/shadcn-docs.md)
+- Use `PartyKit` for real-time collaborative workflows and message, refer to docs [partykit-docs.md](mdc:ai-ref/external-docs/partykit-docs.md)
 
 # Dev Process
 - When using any framework/lib, first check if its installed

@@ -1,0 +1,54 @@
+import "./styles.css";
+
+import PartySocket from "partysocket";
+
+declare const PARTYKIT_HOST: string;
+
+let pingInterval: ReturnType<typeof setInterval>;
+
+// Let's append all the messages we get into this DOM element
+const output = document.getElementById("app") as HTMLDivElement;
+
+// Helper function to add a new line to the DOM
+function add(text: string) {
+  output.appendChild(document.createTextNode(text));
+  output.appendChild(document.createElement("br"));
+}
+
+// Accept a dynamic room ID (for integration with webapp later)
+const roomId = window.ROOM_ID || "my-new-room";
+
+// A PartySocket is like a WebSocket, except it's a bit more magical.
+// It handles reconnection logic, buffering messages while it's offline, and more.
+const conn = new PartySocket({
+  host: PARTYKIT_HOST,
+  room: roomId,
+});
+
+// You can even start sending messages before the connection is open!
+conn.addEventListener("message", (event) => {
+  try {
+    const data = JSON.parse(event.data);
+    add(`Received -> ${JSON.stringify(data)}`);
+  } catch (e) {
+    add(`Received (raw) -> ${event.data}`);
+  }
+});
+
+// Let's listen for when the connection opens
+// And send a ping every 2 seconds right after
+conn.addEventListener("open", () => {
+  add("Connected!");
+});
+
+// Example: send a structured message (for demo)
+function sendMessage(text) {
+  conn.send(
+    JSON.stringify({
+      type: "chat-message",
+      text,
+      sentAt: Date.now(),
+      user: window.USER || "demo-user",
+    })
+  );
+}

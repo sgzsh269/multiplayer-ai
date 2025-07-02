@@ -1,8 +1,72 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  Pause,
+  UserPlus,
+  MoreHorizontal,
+  Paperclip,
+  Image,
+  Send,
+  Users,
+  MessageSquare,
+  FileText,
+  Brain,
+  Download,
+  Share2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import React from "react";
+import { usePartySocket, PartyMessage } from "@/lib/usePartySocket";
+
+interface Participant {
+  id: string;
+  name: string;
+  role: string;
+  isOnline: boolean;
+  isTyping: boolean;
+  avatarInitials: string;
+}
+
+interface Message {
+  id: string;
+  sender: {
+    id: string;
+    name: string;
+    avatarInitials: string;
+  };
+  timestamp: string;
+  content: string;
+}
+
+interface ChatroomDetails {
+  id: string;
+  name: string;
+  startedAgo: string;
+  participantsActive: number;
+  participants: Participant[];
+  messages: Message[];
+  sessionInfo: {
+    started: string;
+    messages: number;
+    filesShared: number;
+    aiInteractions: number;
+  };
+}
 
 export default function ChatroomDetailPage({
   params,
@@ -10,13 +74,22 @@ export default function ChatroomDetailPage({
   params: { id: string };
 }) {
   const router = useRouter();
-  const chatroomId = params.id;
+  const [chatroomId, setChatroomId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await Promise.resolve(params);
+      setChatroomId(resolved.id);
+    };
+    resolveParams();
+  }, [params]);
+
+  // In a real application, you would fetch data using React Query here
   const {
     data: chatroom,
     isLoading,
     isError,
-  } = useQuery({
+  } = useQuery<ChatroomDetails>({
     queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
       const res = await fetch(`/api/chatrooms/${chatroomId}`);
@@ -26,6 +99,50 @@ export default function ChatroomDetailPage({
     },
     enabled: !!chatroomId, // Only run the query if chatroomId is available
   });
+
+  const [messageInput, setMessageInput] = useState("");
+  const queryClient = useQueryClient();
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate the chatroom messages query to refetch data
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      setMessageInput(""); // Clear the input after sending
+    },
+  });
+
+  // Add PartyKit real-time messaging
+  const { messages: partyMessages, sendMessage: sendPartyMessage } =
+    usePartySocket({
+      chatroomId: chatroomId || "",
+      user: chatroom?.participants[0]?.name || "Demo User",
+    });
+
+  // Combine API and PartyKit messages (for demo, just concat, deduplication can be added later)
+  const allMessages = [
+    ...(chatroom?.messages || []),
+    ...partyMessages.map((m, i) => ({
+      id: `realtime-${i}`,
+      sender: {
+        id: m.user,
+        name: m.user,
+        avatarInitials: m.user.slice(0, 2).toUpperCase(),
+      },
+      timestamp: m.sentAt ? new Date(m.sentAt).toLocaleTimeString() : "",
+      content: m.text,
+    })),
+  ];
 
   if (isLoading) {
     return (
@@ -44,31 +161,252 @@ export default function ChatroomDetailPage({
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">{chatroom.name}</h1>
-      <p className="text-gray-600 mb-6">Chatroom ID: {chatroom.id}</p>
-
-      <h2 className="text-2xl font-semibold mb-3">Members</h2>
-      <ul className="list-disc pl-5 mb-6">
-        {chatroom.members.map((member: any) => (
-          <li key={member.id}>{member.displayName}</li>
-        ))}
-      </ul>
-
-      <h2 className="text-2xl font-semibold mb-3">Messages</h2>
-      <div className="space-y-4">
-        {chatroom.messages.map((message: any) => (
-          <div key={message.id} className="bg-gray-100 p-3 rounded-lg">
-            <p className="font-medium">User {message.userId}</p>
-            <p>{message.content}</p>
-            <p className="text-xs text-gray-500">
-              {new Date(message.createdAt).toLocaleString()}
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b p-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-4">
+          <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{chatroom.name}</h1>
+            <p className="text-sm text-gray-500">
+              Started {chatroom.startedAgo} - {chatroom.participantsActive}{" "}
+              participants active
             </p>
           </div>
-        ))}
-      </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="px-2">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Option 1</DropdownMenuItem>
+              <DropdownMenuItem>Option 2</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
 
-      {/* TODO: Add message input and send functionality */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Chat Content */}
+        <main className="flex-1 flex flex-col bg-white border-r">
+          {/* Welcome Banner */}
+          <div className="p-4 bg-blue-50 border-b border-blue-200 text-blue-700 text-sm text-center">
+            Welcome to your collaborative AI session! Team members can now
+            interact with AI together in real-time.
+            <div className="text-xs text-blue-500 mt-1">11:12 AM</div>
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {allMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex items-start space-x-3 ${
+                  message.sender.id === "ai"
+                    ? "flex-row-reverse space-x-reverse"
+                    : ""
+                }`}
+              >
+                <Avatar>
+                  <AvatarFallback>
+                    {message.sender.avatarInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div
+                  className={`flex-1 ${
+                    message.sender.id === "ai" ? "text-right" : "text-left"
+                  }`}
+                >
+                  <div className="flex items-center px-1">
+                    <span className="font-semibold text-gray-900">
+                      {message.sender.name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {message.timestamp}
+                    </span>
+                  </div>
+                  <Card
+                    className={`mt-1 max-w-[60%] py-0 ${
+                      message.sender.id === "ai"
+                        ? "bg-purple-50 text-purple-800 ml-auto"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    <CardContent className="p-0 text-sm">
+                      <div
+                        className="m-0 p-1 leading-tight *:my-0"
+                        dangerouslySetInnerHTML={{ __html: message.content }}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Message Input */}
+          <div className="border-t p-4 bg-white">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Type your message to collaborate with AI and your team..."
+                className="flex-1"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (messageInput.trim()) {
+                      sendMessageMutation.mutate(messageInput.trim());
+                      sendPartyMessage(messageInput.trim());
+                    }
+                    setMessageInput("");
+                  }
+                }}
+              />
+              <Button variant="ghost" size="icon">
+                <Paperclip className="w-5 h-5 text-gray-500" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <Image className="w-5 h-5 text-gray-500" />
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                onClick={() => {
+                  if (messageInput.trim()) {
+                    sendMessageMutation.mutate(messageInput.trim());
+                    sendPartyMessage(messageInput.trim());
+                  }
+                }}
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-500 mt-2 px-1">
+              <span>Press Enter to send, Shift+Enter for new line</span>
+              <span>{chatroom.participantsActive} participants online</span>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 flex items-center space-x-1">
+              <span>Console</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 px-1">
+                    <MoreHorizontal className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem>Clear Console</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="w-80 bg-white border-l p-6 flex flex-col space-y-6">
+          {/* Participants */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Participants ({chatroom.participants.length})
+              </h2>
+              <Users className="w-5 h-5 text-gray-500" />
+            </div>
+            <div className="space-y-3">
+              {chatroom.participants.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="relative">
+                    <Avatar>
+                      <AvatarFallback>
+                        {participant.avatarInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span
+                      className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white ${
+                        participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                      }`}
+                    ></span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {participant.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{participant.role}</p>
+                  </div>
+                  {participant.isTyping && (
+                    <span className="text-xs text-blue-500">Typing...</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Session Info */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Session Info
+            </h2>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div className="flex justify-between">
+                <span>Started:</span>
+                <span className="font-medium">
+                  {chatroom.sessionInfo.started}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Messages:</span>
+                <span className="font-medium">
+                  {chatroom.sessionInfo.messages}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Files shared:</span>
+                <span className="font-medium">
+                  {chatroom.sessionInfo.filesShared}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>AI interactions:</span>
+                <span className="font-medium">
+                  {chatroom.sessionInfo.aiInteractions}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Quick Actions */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Quick Actions
+            </h2>
+            <div className="space-y-3">
+              <Button variant="outline" className="w-full">
+                <Download className="w-4 h-4 mr-2" />
+                Export Session
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share Session
+              </Button>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

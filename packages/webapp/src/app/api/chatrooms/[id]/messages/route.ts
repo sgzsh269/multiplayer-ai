@@ -1,37 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/clerk-sdk-node";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/db/client";
+import { messages, users } from "@/db/schema";
+import { eq, asc } from "drizzle-orm";
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
-  // Dummy messages list
+  const { params } = await context;
   const { userId } = await auth();
-  return NextResponse.json({
-    messages: [
-      {
-        id: 1,
-        userId: 1,
-        content: "Hello!",
-        createdAt: new Date().toISOString(),
-      },
-      { id: 2, userId: 2, content: "Hi!", createdAt: new Date().toISOString() },
-    ],
-  });
+  const chatroomId = params.id;
+
+  if (!chatroomId) {
+    return NextResponse.json(
+      { error: "Chatroom ID is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const chatMessages = await db
+      .select({
+        id: messages.id,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        sender: {
+          id: users.id,
+          name: users.name,
+          avatarInitials: users.avatarInitials,
+        },
+      })
+      .from(messages)
+      .leftJoin(users, eq(messages.userId, users.id))
+      .where(eq(messages.chatroomId, chatroomId))
+      .orderBy(asc(messages.createdAt));
+
+    return NextResponse.json({ messages: chatMessages });
+  } catch (error) {
+    console.error("Error fetching chatroom messages:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch chatroom messages" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
-  // Dummy create message
+  const { params } = await context;
   const { userId } = await auth();
-  return NextResponse.json({
-    message: {
-      id: 3,
-      userId: 1,
-      content: "This is a new message!",
-      createdAt: new Date().toISOString(),
-    },
-  });
+
+  const { id } = await params
+  const chatroomId = id;
+  
+  const { content } = await req.json();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await db.select().from(users).where(eq(users.clerkId, userId));
+  if (!user[0]) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  if (!chatroomId || !content) {
+    return NextResponse.json(
+      { error: "Chatroom ID and content are required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const newMessage = await db
+      .insert(messages)
+      .values({
+        chatroomId: chatroomId,
+        userId: user[0].id,
+        content: content,
+      })
+      .returning();
+
+    console.log("New message inserted:", newMessage[0]);
+    return NextResponse.json({ message: newMessage[0] });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    return NextResponse.json(
+      { error: "Failed to send message" },
+      { status: 500 }
+    );
+  }
 }
