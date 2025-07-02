@@ -26,3 +26,4 @@ alwaysApply: true
 - Always use [project-plan.md](mdc:ai-ref/project-docs/project-plan.md) as JIRA to create, update and track implementation of various functionalities 
 - Feel free to ask follow up clarifying questions for better understanding if something in the user request, plan, spec is unclear, vague or ambigious 
 - Do not re-run the dev server as hot-reloading is active
+- Commit code after every task in the plan doc is completed

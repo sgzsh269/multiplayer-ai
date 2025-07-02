@@ -1,0 +1,1 @@
+ALTER TABLE "roles" RENAME TO "chatroom_members";

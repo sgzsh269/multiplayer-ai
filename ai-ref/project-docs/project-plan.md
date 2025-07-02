@@ -76,7 +76,7 @@ PROJECT PLAN
   - [x] Simplify Dashboard UI (remove stats, filter, specific navigation links, update button text).
 
 - [~] **3A.4** E2E & Integration Testing
-  - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
+-   - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
 
 ---
 
@@ -148,5 +148,8 @@ PROJECT PLAN
 - [ ] **11.2** Review out-of-scope items for future planning.
 
 ---
+
+### 12. E2E & Integration Testing
+  - [ ] Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
 
 // Each task above is designed to deliver a testable, end-to-end user flow.

@@ -36,7 +36,7 @@ export const files = pgTable("files", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const roles = pgTable("roles", {
+export const chatroom_members = pgTable("chatroom_members", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   chatroomId: integer("chatroom_id").notNull(),
