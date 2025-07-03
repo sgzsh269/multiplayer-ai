@@ -147,8 +147,26 @@ PROJECT PLAN
 - [x] **6A.4** Conversation context awareness (last 10 messages)
 - [x] **6A.5** AI settings management per chatroom
 - [x] **6A.6** Distinctive UI for AI messages with emoji avatar and styling
+- [x] **6A.7** **Robust Backend Broadcasting**: AI messages broadcasted directly from backend to PartyKit
+  - Backend-to-PartyKit direct integration for reliability
+  - AI API route broadcasts to PartyKit after generating response
+  - Eliminates frontend dependency for real-time AI message delivery
+  - Handles PartyKit failures gracefully without breaking AI responses
+- [x] **6A.8** **Secure AI Broadcasting**: Protected AI endpoint with comprehensive security
+  - API key authentication between backend and PartyKit server
+  - Rate limiting (10 AI messages per minute per room)
+  - Request validation and payload size limits
+  - Chatroom ID verification to prevent cross-room message injection
+  - Proper error handling and logging for security events
 
-**Note:** Requires `OPENAI_API_KEY` in `.env.local` file to function.
+**Environment Variables Required:**
+- `OPENAI_API_KEY`: OpenAI API key for AI responses
+- `SHARED_PARTYKIT_BACKEND_API_KEY`: Shared secret for backend-to-PartyKit authentication
+
+**Setup Instructions:**
+1. Generate a secure API key: `bun -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` or `bun packages/common/generate-api-key.js`
+2. Add the generated key as `SHARED_PARTYKIT_BACKEND_API_KEY` in both webapp and realtime `.env.local` files
+3. Ensure the same key is used in both environments for authentication to work
 
 ---
 

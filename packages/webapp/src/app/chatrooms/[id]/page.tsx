@@ -159,12 +159,7 @@ export default function ChatroomDetailPage({
       queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
       // Auto-scroll to show AI response
       setShouldAutoScroll(true);
-
-      // Broadcast AI response through PartyKit for real-time updates
-      if (data.aiResponse) {
-        // Use the existing sendMessage function to broadcast AI response
-        sendPartyMessage(data.aiResponse, true); // Pass isAiMessage flag
-      }
+      // AI message broadcasting is now handled by the backend
     },
   });
 

@@ -54,19 +54,16 @@ export function usePartySocket({
     };
   }, [chatroomId, user, isLoaded, isSignedIn, getToken]);
 
-  const sendMessage = async (text: string, isAiMessage = false) => {
+  const sendMessage = async (text: string) => {
     if (!connRef.current) return;
     const token = await getToken();
     if (!token) return;
     connRef.current.send(
       JSON.stringify({
-        type: isAiMessage ? "ai-message" : "chat-message",
+        type: "chat-message",
         text,
         sentAt: Date.now(),
-        user: isAiMessage ? "AI Assistant" : user,
-        userId: isAiMessage ? "ai-assistant" : undefined,
-        displayName: isAiMessage ? "AI Assistant" : user,
-        isAiMessage,
+        user,
         token,
       })
     );

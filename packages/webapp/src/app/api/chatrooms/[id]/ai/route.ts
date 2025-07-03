@@ -124,6 +124,34 @@ Current user message: ${message}`;
       })
       .returning();
 
+    // Broadcast AI message to PartyKit for real-time updates
+    try {
+      const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+      if (!apiKey) {
+        console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+        // Continue without broadcasting but log the error
+      } else {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-message`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              message: text,
+              chatroomId: chatroomId.toString(),
+              timestamp: Date.now(),
+            }),
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to broadcast AI message to PartyKit:", error);
+      // Don't fail the request if PartyKit broadcast fails
+    }
+
     return NextResponse.json({
       message: aiMessage[0],
       aiResponse: text,
