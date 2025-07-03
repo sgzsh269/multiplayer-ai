@@ -15,12 +15,29 @@ export interface PartyMessage {
   isAiMessage?: boolean;
 }
 
+export interface SettingsUpdateMessage {
+  type: "settings-update";
+  settings: {
+    aiMode: string;
+    aiEnabled: boolean;
+  };
+  timestamp: number;
+  updatedBy: {
+    id: number;
+    displayName: string;
+  };
+  roomId: string;
+  receivedAt: number;
+}
+
 export function usePartySocket({
   chatroomId,
   user,
+  onSettingsUpdate,
 }: {
   chatroomId: string;
   user: string;
+  onSettingsUpdate?: (update: SettingsUpdateMessage) => void;
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const connRef = useRef<PartySocket | null>(null);
@@ -42,6 +59,14 @@ export function usePartySocket({
       conn.addEventListener("message", (event) => {
         try {
           const data = JSON.parse(event.data);
+
+          // Handle settings updates
+          if (data.type === "settings-update" && onSettingsUpdate) {
+            onSettingsUpdate(data as SettingsUpdateMessage);
+            return;
+          }
+
+          // Handle regular messages
           if (isMounted) setMessages((prev) => [...prev, data]);
         } catch (e) {
           // ignore malformed
@@ -52,7 +77,7 @@ export function usePartySocket({
       isMounted = false;
       if (conn) conn.close();
     };
-  }, [chatroomId, user, isLoaded, isSignedIn, getToken]);
+  }, [chatroomId, user, isLoaded, isSignedIn, getToken, onSettingsUpdate]);
 
   const sendMessage = async (text: string) => {
     if (!connRef.current) return;

@@ -112,6 +112,38 @@ export async function PATCH(
       );
     }
 
+    // Broadcast settings change to PartyKit for real-time updates
+    try {
+      const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+      if (!apiKey) {
+        console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+        // Continue without broadcasting but log the error
+      } else {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/settings-update`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              settings: updatedChatroom[0],
+              chatroomId: chatroomId.toString(),
+              timestamp: Date.now(),
+              updatedBy: {
+                id: user[0].id,
+                displayName: user[0].displayName,
+              },
+            }),
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to broadcast settings update to PartyKit:", error);
+      // Don't fail the request if PartyKit broadcast fails
+    }
+
     return NextResponse.json({ settings: updatedChatroom[0] });
   } catch (error) {
     console.error("Error updating chatroom settings:", error);

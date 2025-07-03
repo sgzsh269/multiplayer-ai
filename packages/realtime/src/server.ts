@@ -87,6 +87,70 @@ export default class Server implements Party.Server {
       }
     }
 
+    // Handle settings update broadcasts from backend
+    if (req.method === "POST" && req.url.includes("/settings-update")) {
+      try {
+        // Verify API key authentication
+        const authHeader = req.headers.get("authorization");
+        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+
+        if (!expectedApiKey) {
+          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          return new Response("Server configuration error", { status: 500 });
+        }
+
+        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
+          console.warn("Unauthorized settings update broadcast attempt");
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const body = (await req.json()) as {
+          settings: {
+            aiMode: string;
+            aiEnabled: boolean;
+          };
+          chatroomId: string;
+          timestamp?: number;
+          updatedBy: {
+            id: number;
+            displayName: string;
+          };
+        };
+
+        // Additional validation
+        if (!body.settings || !body.chatroomId || !body.updatedBy) {
+          return new Response("Invalid request payload", { status: 400 });
+        }
+
+        // Ensure the chatroomId matches the room
+        if (body.chatroomId !== this.room.id) {
+          console.warn(
+            `Chatroom ID mismatch: ${body.chatroomId} vs ${this.room.id}`
+          );
+          return new Response("Chatroom ID mismatch", { status: 400 });
+        }
+
+        // Broadcast settings update to all connected clients
+        this.room.broadcast(
+          JSON.stringify({
+            type: "settings-update",
+            settings: body.settings,
+            timestamp: body.timestamp || Date.now(),
+            updatedBy: body.updatedBy,
+            roomId: body.chatroomId,
+            receivedAt: Date.now(),
+          })
+        );
+
+        return new Response("Settings update broadcasted", { status: 200 });
+      } catch (e) {
+        console.error("Error broadcasting settings update:", e);
+        return new Response("Error broadcasting settings update", {
+          status: 500,
+        });
+      }
+    }
+
     return new Response("Not found", { status: 404 });
   }
 

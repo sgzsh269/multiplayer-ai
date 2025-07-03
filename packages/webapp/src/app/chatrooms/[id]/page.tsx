@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -117,6 +117,11 @@ export default function ChatroomDetailPage({
     aiEnabled: true,
   });
   const [linkCopied, setLinkCopied] = useState(false);
+  const [settingsNotification, setSettingsNotification] = useState<{
+    show: boolean;
+    message: string;
+    updatedBy: string;
+  }>({ show: false, message: "", updatedBy: "" });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -235,6 +240,36 @@ export default function ChatroomDetailPage({
     }
   };
 
+  // Handle real-time settings updates
+  const handleSettingsUpdate = useCallback(
+    (update: any) => {
+      // Update local settings state
+      setAiSettings(update.settings);
+
+      // Show notification if updated by someone else
+      if (update.updatedBy.displayName !== displayName) {
+        const aiModeLabel =
+          update.settings.aiMode === "auto-respond"
+            ? "Auto-respond"
+            : "Summoned";
+        const statusLabel = update.settings.aiEnabled ? "enabled" : "disabled";
+        const message = `AI settings updated: ${aiModeLabel} mode, AI ${statusLabel}`;
+
+        setSettingsNotification({
+          show: true,
+          message,
+          updatedBy: update.updatedBy.displayName,
+        });
+
+        // Hide notification after 5 seconds
+        setTimeout(() => {
+          setSettingsNotification((prev) => ({ ...prev, show: false }));
+        }, 5000);
+      }
+    },
+    [displayName]
+  );
+
   // Add PartyKit real-time messaging
   const {
     messages: partyMessages,
@@ -243,6 +278,7 @@ export default function ChatroomDetailPage({
   } = usePartySocket({
     chatroomId: chatroomId || "",
     user: displayName,
+    onSettingsUpdate: handleSettingsUpdate,
   });
 
   // Clear PartyKit messages when chatroom data changes (to prevent accumulation)
@@ -360,6 +396,29 @@ export default function ChatroomDetailPage({
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      {/* Settings Update Notification */}
+      {settingsNotification.show && (
+        <div className="bg-blue-50 border-b border-blue-200 p-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Brain className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-800">
+              <strong>{settingsNotification.updatedBy}</strong>{" "}
+              {settingsNotification.message}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setSettingsNotification((prev) => ({ ...prev, show: false }))
+            }
+            className="text-blue-600 hover:text-blue-800"
+          >
+            ×
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">

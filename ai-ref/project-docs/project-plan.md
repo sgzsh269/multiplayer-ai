@@ -115,11 +115,13 @@ PROJECT PLAN
 - [x] **5A.6** Frontend: Send new messages through PartyKit (persistence via REST API for now; PartyKit server persistence/auth is next).
 - [x] **5A.6a** Frontend: Fix PartyKit message accumulation and deduplication with API messages.
 - [x] **5A.6b** Frontend: Use current user's Clerk identity for PartyKit connections (not first participant).
+- [x] **5A.10** Backend: Extend PartyKit server for settings broadcasting (real-time AI mode synchronization).
 - [ ] **5A.7** Frontend: Show real-time presence (online users) using PartyKit connection state.
 - [ ] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
 - [ ] **5A.9** E2E: Test real-time chat between two users in the same room using Playwright MCP.
 
 [note] Clerk authentication is now enforced for all PartyKit connections and messages. Frontend sends the Clerk session token with every connection and message.
+[note] PartyKit server now supports multiple message types: chat messages, AI responses, and settings updates with secure endpoint authentication.
 
 ---
 
@@ -168,7 +170,13 @@ PROJECT PLAN
   - Database migration applied to update default AI mode to auto-respond
   - Bug fixes: Resolved undefined function errors (hasAiMentions, renderInputOverlay)
   - Clean input field implementation without complex badge overlays
-
+- [x] **6A.10** **Real-Time Settings Synchronization**: Live settings updates across all users
+  - Backend: Settings API broadcasts changes to PartyKit when AI mode or enable/disable status changes
+  - PartyKit: New settings-update endpoint handles secure broadcasting of setting changes
+  - Frontend: Real-time settings updates applied automatically to all connected users
+  - UI notifications: Visual indicators when other users change settings (with user attribution)
+  - Prevents settings conflicts and keeps all participants in sync with current AI configuration
+  - Framework extensible for future chatroom settings (privacy, permissions, tools, etc.)
 
 ### 7. File & Image Uploads
 
@@ -220,4 +228,4 @@ PROJECT PLAN
 
 [note] Next.js 15 dynamic API route param handling (`params` as Promise) was updated and tested in all relevant API routes.
 
-[completed] AI Assistant Integration (Section 6 & 6A) - Fully implemented with auto-respond and summoned modes, real-time messaging, secure backend broadcasting, share link functionality, and all bug fixes applied. Ready for production use.
+[completed] AI Assistant Integration (Section 6 & 6A) - Fully implemented with auto-respond and summoned modes, real-time messaging, secure backend broadcasting, real-time settings synchronization, share link functionality, and all bug fixes applied. Ready for production use with complete multi-user collaboration support.
