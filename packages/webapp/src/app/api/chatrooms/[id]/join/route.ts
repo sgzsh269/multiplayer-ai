@@ -13,7 +13,7 @@ export async function POST(
     const { userId } = await auth();
     if (!userId)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const chatroomId = Number(params.id);
+    const chatroomId = params.id; // UUID string, no need to parse
     // Find the user in the DB
     const user = await db
       .select({
@@ -61,7 +61,7 @@ export async function POST(
             },
             body: JSON.stringify({
               type: "member-joined",
-              chatroomId: chatroomId.toString(),
+              chatroomId: chatroomId,
               member: {
                 id: user[0].id,
                 name: memberName,

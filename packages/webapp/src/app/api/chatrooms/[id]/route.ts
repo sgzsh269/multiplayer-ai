@@ -11,7 +11,7 @@ export async function GET(
   const { params } = await context;
 
   const { id } = await params;
-  const chatroomId = Number(id);
+  const chatroomId = id; // UUID string, no need to parse
 
   try {
     const { userId: clerkUserId } = await auth();
@@ -19,9 +19,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (isNaN(chatroomId)) {
+    // Validate UUID format (basic check)
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(chatroomId)) {
       return NextResponse.json(
-        { error: "Invalid Chatroom ID" },
+        { error: "Invalid Chatroom ID format" },
         { status: 400 }
       );
     }

@@ -113,7 +113,10 @@ export default function Dashboard() {
       try {
         if (chatroomId.startsWith("http")) {
           const url = new URL(chatroomId);
-          const pathMatch = url.pathname.match(/\/chatrooms\/(\d+)/);
+          // Update regex to match UUID format in URL path
+          const pathMatch = url.pathname.match(
+            /\/chatrooms\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
+          );
           if (pathMatch) {
             chatroomId = pathMatch[1];
           } else {
@@ -129,8 +132,10 @@ export default function Dashboard() {
         // If not a URL but parsing failed, continue with original input
       }
 
-      // Validate that we have a numeric ID
-      if (!/^\d+$/.test(chatroomId)) {
+      // Validate that we have a UUID format
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(chatroomId)) {
         setJoinError("Please enter a valid chatroom ID or URL");
         throw new Error("Invalid chatroom ID format");
       }
@@ -155,7 +160,10 @@ export default function Dashboard() {
       if (chatroomId.startsWith("http")) {
         try {
           const url = new URL(chatroomId);
-          const pathMatch = url.pathname.match(/\/chatrooms\/(\d+)/);
+          // Update regex to match UUID format in URL path
+          const pathMatch = url.pathname.match(
+            /\/chatrooms\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
+          );
           if (pathMatch) {
             chatroomId = pathMatch[1];
           }
@@ -403,7 +411,7 @@ export default function Dashboard() {
                         Session ID or Invitation Link
                       </label>
                       <Input
-                        placeholder="123 or http://localhost:3000/chatrooms/123"
+                        placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000 or invitation URL"
                         value={joinId}
                         onChange={(e) => setJoinId(e.target.value)}
                       />

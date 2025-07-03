@@ -23,8 +23,8 @@ export async function DELETE(
   context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
   const { params } = await context;
-  const { id } = await params;  
-  const chatroomId = parseInt(id);
+  const { id } = await params;
+  const chatroomId = id; // UUID string, no need to parse
 
   try {
     const { userId: clerkUserId } = await auth();
@@ -98,7 +98,7 @@ export async function DELETE(
     // Prevent removing the last admin
     if (memberToRemove[0].role === "admin") {
       const adminCount = await db
-        .select({ count: chatroom_members.id })
+        .select({ role: chatroom_members.role })
         .from(chatroom_members)
         .where(
           and(
@@ -107,7 +107,7 @@ export async function DELETE(
           )
         );
 
-      if (adminCount.length <= 1) {
+      if (adminCount.length === 1) {
         return NextResponse.json(
           { error: "Cannot remove the last admin from the chatroom" },
           { status: 400 }
@@ -115,7 +115,7 @@ export async function DELETE(
       }
     }
 
-    // Prevent admin from removing themselves
+    // Prevent self-removal
     if (memberId === requestingUser[0].id) {
       return NextResponse.json(
         { error: "Cannot remove yourself from the chatroom" },
@@ -123,7 +123,7 @@ export async function DELETE(
       );
     }
 
-    // Get member details before removal for broadcasting
+    // Get member details for broadcasting
     const memberToRemoveDetails = await db
       .select({
         id: users.id,
@@ -131,9 +131,10 @@ export async function DELETE(
         lastName: users.lastName,
       })
       .from(users)
-      .where(eq(users.id, memberId));
+      .where(eq(users.id, memberId))
+      .limit(1);
 
-    // Remove the member from the chatroom
+    // Remove the member
     await db
       .delete(chatroom_members)
       .where(
@@ -165,7 +166,7 @@ export async function DELETE(
             },
             body: JSON.stringify({
               type: "member-removed",
-              chatroomId: chatroomId.toString(),
+              chatroomId: chatroomId,
               member: {
                 id: memberToRemoveDetails[0].id,
                 name: memberName,

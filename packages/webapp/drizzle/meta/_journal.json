@@ -5,64 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1751367582363,
-      "tag": "0000_careful_blonde_phantom",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1751430844583,
-      "tag": "0001_fluffy_vulcan",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1751467424240,
-      "tag": "0002_wonderful_carmella_unuscione",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1751474962289,
-      "tag": "0003_flippant_doctor_doom",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1751476135843,
-      "tag": "0004_careless_spencer_smythe",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1751524838484,
-      "tag": "0005_fresh_sir_ram",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1751550589086,
-      "tag": "0006_stale_makkari",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1751553584829,
-      "tag": "0007_orange_brother_voodoo",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1751553911012,
-      "tag": "0008_flaky_lockheed",
+      "when": 1751562059446,
+      "tag": "0000_polite_christian_walker",
       "breakpoints": true
     }
   ]

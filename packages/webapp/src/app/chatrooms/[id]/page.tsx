@@ -320,7 +320,7 @@ export default function ChatroomDetailPage({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ memberId: parseInt(memberId) }),
+        body: JSON.stringify({ memberId: memberId }),
       });
       if (!res.ok) {
         const error = await res.json();

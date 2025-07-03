@@ -172,7 +172,7 @@ export default class Server implements Party.Server {
           chatroomId: string;
           timestamp?: number;
           updatedBy: {
-            id: number;
+            id: string; // UUID string instead of number
             displayName: string;
           };
         };
@@ -232,7 +232,7 @@ export default class Server implements Party.Server {
           type: "member-joined" | "member-removed";
           chatroomId: string;
           member: {
-            id: number;
+            id: string; // UUID string instead of number
             name: string;
             role: string;
           };

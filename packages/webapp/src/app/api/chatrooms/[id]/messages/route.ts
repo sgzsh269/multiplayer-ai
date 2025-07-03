@@ -26,7 +26,7 @@ export async function GET(
       })
       .from(messages)
       .leftJoin(users, eq(messages.userId, users.id))
-      .where(eq(messages.chatroomId, parseInt(chatroomId)))
+      .where(eq(messages.chatroomId, chatroomId))
       .orderBy(asc(messages.createdAt));
 
     const formattedMessages = chatMessages.map((msg) => ({
@@ -62,7 +62,7 @@ export async function DELETE(
   context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
   const { params } = await context;
-  const chatroomId = parseInt(params.id);
+  const chatroomId = params.id;
 
   try {
     const { userId: clerkUserId } = await auth();
@@ -158,7 +158,7 @@ export async function POST(
     const newMessage = await db
       .insert(messages)
       .values({
-        chatroomId: parseInt(chatroomId),
+        chatroomId: chatroomId,
         userId: user[0].id,
         content: content,
       })

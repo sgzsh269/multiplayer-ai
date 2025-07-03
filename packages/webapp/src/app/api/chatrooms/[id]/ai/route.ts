@@ -14,7 +14,7 @@ export async function POST(
   const { userId } = await auth();
 
   const { id } = await params;
-  const chatroomId = parseInt(id);
+  const chatroomId = id; // UUID string, no need to parse
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -150,7 +150,7 @@ Be concise but informative. You're part of a team discussion, so be collaborativ
                 },
                 body: JSON.stringify({
                   type: "start",
-                  chatroomId: chatroomId.toString(),
+                  chatroomId: chatroomId,
                   streamId,
                   timestamp: Date.now(),
                 }),
@@ -185,7 +185,7 @@ Be concise but informative. You're part of a team discussion, so be collaborativ
                   body: JSON.stringify({
                     type: "token",
                     token: delta,
-                    chatroomId: chatroomId.toString(),
+                    chatroomId: chatroomId,
                     streamId,
                     timestamp: Date.now(),
                   }),
@@ -225,7 +225,7 @@ Be concise but informative. You're part of a team discussion, so be collaborativ
                 },
                 body: JSON.stringify({
                   message: fullResponse,
-                  chatroomId: chatroomId.toString(),
+                  chatroomId: chatroomId,
                   timestamp: Date.now(),
                 }),
               }
@@ -249,7 +249,7 @@ Be concise but informative. You're part of a team discussion, so be collaborativ
                 },
                 body: JSON.stringify({
                   type: "complete",
-                  chatroomId: chatroomId.toString(),
+                  chatroomId: chatroomId,
                   streamId,
                   messageId: aiMessage[0].id,
                   timestamp: Date.now(),
@@ -275,7 +275,7 @@ Be concise but informative. You're part of a team discussion, so be collaborativ
         );
 
         controller.close();
-      },
+      }
     });
 
     return new Response(stream, {

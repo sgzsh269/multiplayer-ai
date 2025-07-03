@@ -76,26 +76,53 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId)
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const body = await req.json();
-    const { name, description } = body;
-    // Find the user in the DB
-    const user = await db.select().from(users).where(eq(users.clerkId, userId));
-    if (!user[0])
+    }
+
+    const { name, isPrivate = false } = await req.json();
+
+    if (!name || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Chatroom name is required" },
+        { status: 400 }
+      );
+    }
+
+    // Find the user's internal database ID
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId));
+
+    if (!user[0]) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    // Create chatroom
-    const [chatroom] = await db
+    }
+
+    // Create the chatroom
+    const newChatroom = await db
       .insert(chatrooms)
-      .values({ name, createdBy: user[0].id })
+      .values({
+        name: name.trim(),
+        isPrivate: isPrivate ? "1" : "0", // Convert boolean to string
+        createdBy: user[0].id, // UUID
+      })
       .returning();
-    // Add user as admin member
-    await db
-      .insert(chatroom_members)
-      .values({ userId: user[0].id, chatroomId: chatroom.id, role: "admin" });
-    return NextResponse.json({ chatroom });
-  } catch (err) {
+
+    // Add the creator as an admin member
+    await db.insert(chatroom_members).values({
+      userId: user[0].id,
+      chatroomId: newChatroom[0].id,
+      role: "admin",
+    });
+
+    return NextResponse.json({
+      chatroom: newChatroom[0],
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error creating chatroom:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
