@@ -31,7 +31,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
-import { usePartySocket, PartyMessage } from "@/lib/usePartySocket";
+import {
+  usePartySocket,
+  PartyMessage,
+  StreamingAiMessage,
+} from "@/lib/usePartySocket";
 import { useUser } from "@clerk/nextjs";
 
 interface Participant {
@@ -122,6 +126,11 @@ export default function ChatroomDetailPage({
     message: string;
     updatedBy: string;
   }>({ show: false, message: "", updatedBy: "" });
+  const [streamingAiMessage, setStreamingAiMessage] = useState<{
+    content: string;
+    isStreaming: boolean;
+    messageId?: string;
+  }>({ content: "", isStreaming: false });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -141,14 +150,18 @@ export default function ChatroomDetailPage({
     },
   });
 
-  const aiResponseMutation = useMutation({
-    mutationFn: async ({
-      message,
-      triggerType,
-    }: {
-      message: string;
-      triggerType: string;
-    }) => {
+  const handleStreamingAiResponse = async ({
+    message,
+    triggerType,
+  }: {
+    message: string;
+    triggerType: string;
+  }) => {
+    // Start streaming
+    setStreamingAiMessage({ content: "", isStreaming: true });
+    setShouldAutoScroll(true);
+
+    try {
       const res = await fetch(`/api/chatrooms/${chatroomId}/ai`, {
         method: "POST",
         headers: {
@@ -156,16 +169,70 @@ export default function ChatroomDetailPage({
         },
         body: JSON.stringify({ message, triggerType }),
       });
+
       if (!res.ok) {
         throw new Error("Failed to get AI response");
       }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
-      // Auto-scroll to show AI response
-      setShouldAutoScroll(true);
-      // AI message broadcasting is now handled by the backend
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      if (!reader) {
+        throw new Error("No response body reader");
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.token) {
+                setStreamingAiMessage((prev) => ({
+                  ...prev,
+                  content: prev.content + parsed.token,
+                }));
+              } else if (parsed.complete) {
+                setStreamingAiMessage((prev) => ({
+                  ...prev,
+                  isStreaming: false,
+                  messageId: parsed.messageId,
+                }));
+                // Refresh the chatroom data to get the complete message
+                queryClient.invalidateQueries({
+                  queryKey: ["chatroom", chatroomId],
+                });
+                // Clear streaming message after a delay
+                setTimeout(() => {
+                  setStreamingAiMessage({ content: "", isStreaming: false });
+                }, 500);
+              }
+            } catch (e) {
+              console.error("Failed to parse streaming data:", e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Streaming AI response error:", error);
+      setStreamingAiMessage({ content: "", isStreaming: false });
+      throw error;
+    }
+  };
+
+  const aiResponseMutation = useMutation({
+    mutationFn: handleStreamingAiResponse,
+    onError: (error) => {
+      console.error("AI response error:", error);
+      setStreamingAiMessage({ content: "", isStreaming: false });
     },
   });
 
@@ -275,6 +342,7 @@ export default function ChatroomDetailPage({
     messages: partyMessages,
     sendMessage: sendPartyMessage,
     clearMessages,
+    streamingAiMessage: partyStreamingAiMessage,
   } = usePartySocket({
     chatroomId: chatroomId || "",
     user: displayName,
@@ -339,13 +407,59 @@ export default function ChatroomDetailPage({
 
   const allMessages = Array.from(messageMap.values());
 
-  // Auto-scroll to bottom only when the current user sends a message
+  // Add local streaming AI message if active
+  if (streamingAiMessage.isStreaming && streamingAiMessage.content) {
+    allMessages.push({
+      id: "streaming-ai-local",
+      sender: { id: "ai-assistant", name: "AI Assistant", avatarUrl: null },
+      timestamp: new Date().toLocaleTimeString(),
+      content: streamingAiMessage.content,
+      isAiMessage: true,
+      _source: "streaming-local",
+      _isStreaming: true,
+    });
+  }
+
+  // Add remote streaming AI message if active (from other users) and not already streaming locally
+  if (
+    partyStreamingAiMessage?.isActive &&
+    partyStreamingAiMessage.content &&
+    !streamingAiMessage.isStreaming
+  ) {
+    allMessages.push({
+      id: "streaming-ai-remote",
+      sender: { id: "ai-assistant", name: "AI Assistant", avatarUrl: null },
+      timestamp: new Date(
+        partyStreamingAiMessage.timestamp
+      ).toLocaleTimeString(),
+      content: partyStreamingAiMessage.content,
+      isAiMessage: true,
+      _source: "streaming-remote",
+      _isStreaming: true,
+    });
+  }
+
+  // Auto-scroll to bottom only when the current user sends a message or AI is streaming
   useEffect(() => {
-    if (shouldAutoScroll) {
+    if (
+      shouldAutoScroll ||
+      streamingAiMessage.isStreaming ||
+      partyStreamingAiMessage?.isActive
+    ) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      setShouldAutoScroll(false); // Reset the flag
+      if (
+        !streamingAiMessage.isStreaming &&
+        !partyStreamingAiMessage?.isActive
+      ) {
+        setShouldAutoScroll(false); // Reset the flag only when not streaming
+      }
     }
-  }, [allMessages.length, shouldAutoScroll]);
+  }, [
+    allMessages.length,
+    shouldAutoScroll,
+    streamingAiMessage.content,
+    partyStreamingAiMessage?.content,
+  ]);
 
   // Helper function to handle sending messages
   const handleSendMessage = () => {
@@ -566,6 +680,16 @@ export default function ChatroomDetailPage({
                       <CardContent className="p-0 text-sm">
                         <div className="m-0 p-3 leading-tight *:my-0">
                           {renderMessageContent(message.content)}
+                          {(message as any)._isStreaming && (
+                            <span className="inline-flex items-center ml-1">
+                              <span className="animate-pulse text-purple-600">
+                                ●
+                              </span>
+                              <span className="ml-1 text-xs text-purple-600 animate-pulse">
+                                AI typing...
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

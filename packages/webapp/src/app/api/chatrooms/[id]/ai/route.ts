@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
 import { messages, users, chatrooms } from "@/db/schema";
 import { eq, asc, desc } from "drizzle-orm";
-import { generateText } from "ai";
+import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 export async function POST(
@@ -85,76 +85,204 @@ export async function POST(
     // Reverse to get chronological order
     const conversationHistory = recentMessages.reverse();
 
-    // Build context prompt
-    const contextPrompt = conversationHistory
-      .map((msg) => {
-        const sender = msg.isAiMessage
-          ? "AI Assistant"
-          : msg.sender?.name || "User";
-        return `${sender}: ${msg.content}`;
-      })
-      .join("\n");
-
-    const systemPrompt = `You are a helpful AI assistant in a collaborative chatroom called "${chatroom[0].name}". 
+    // Build messages array for chat completion
+    const chatMessages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }> = [
+      {
+        role: "system",
+        content: `You are a helpful AI assistant in a collaborative chatroom called "${chatroom[0].name}". 
 You can see the conversation history and should provide helpful, relevant responses to user questions.
-Be concise but informative. You're part of a team discussion, so be collaborative and supportive.
+Be concise but informative. You're part of a team discussion, so be collaborative and supportive.`,
+      },
+    ];
 
-Recent conversation:
-${contextPrompt}
+    // Add conversation history as messages
+    conversationHistory.forEach((msg) => {
+      if (msg.isAiMessage) {
+        chatMessages.push({
+          role: "assistant",
+          content: msg.content,
+        });
+      } else {
+        chatMessages.push({
+          role: "user",
+          content: msg.content,
+        });
+      }
+    });
 
-Current user message: ${message}`;
+    // Add current user message
+    chatMessages.push({
+      role: "user",
+      content: message,
+    });
 
-    // Generate AI response using AI SDK
-    const { text } = await generateText({
-      model: openai("gpt-3.5-turbo"),
-      prompt: systemPrompt,
+    // Generate AI response using AI SDK streaming
+    const result = await streamText({
+      model: openai("gpt-4o-mini"),
+      messages: chatMessages,
       temperature: 0.7,
       maxTokens: 500,
     });
 
-    // Save AI response to database
-    const aiMessage = await db
-      .insert(messages)
-      .values({
-        chatroomId: chatroomId,
-        userId: null, // AI messages have null userId
-        content: text,
-        isAiMessage: true,
-        aiModel: "gpt-3.5-turbo",
-      })
-      .returning();
+    // Create a streaming response
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullResponse = "";
+        const streamId = `stream-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
 
-    // Broadcast AI message to PartyKit for real-time updates
-    try {
-      const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-      if (!apiKey) {
-        console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-        // Continue without broadcasting but log the error
-      } else {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-message`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              message: text,
-              chatroomId: chatroomId.toString(),
-              timestamp: Date.now(),
-            }),
+        // Broadcast stream start to PartyKit
+        try {
+          const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+          if (apiKey) {
+            await fetch(
+              `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-stream`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                  type: "start",
+                  chatroomId: chatroomId.toString(),
+                  streamId,
+                  timestamp: Date.now(),
+                }),
+              }
+            );
           }
-        );
-      }
-    } catch (error) {
-      console.error("Failed to broadcast AI message to PartyKit:", error);
-      // Don't fail the request if PartyKit broadcast fails
-    }
+        } catch (error) {
+          console.error("Failed to broadcast stream start to PartyKit:", error);
+        }
 
-    return NextResponse.json({
-      message: aiMessage[0],
-      aiResponse: text,
+        for await (const delta of result.textStream) {
+          // Send each token to the client
+          controller.enqueue(
+            new TextEncoder().encode(
+              `data: ${JSON.stringify({ token: delta })}\n\n`
+            )
+          );
+          fullResponse += delta;
+
+          // Broadcast each token to PartyKit
+          try {
+            const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+            if (apiKey) {
+              await fetch(
+                `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-stream`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${apiKey}`,
+                  },
+                  body: JSON.stringify({
+                    type: "token",
+                    token: delta,
+                    chatroomId: chatroomId.toString(),
+                    streamId,
+                    timestamp: Date.now(),
+                  }),
+                }
+              );
+            }
+          } catch (error) {
+            console.error("Failed to broadcast token to PartyKit:", error);
+          }
+        }
+
+        // Save complete AI response to database
+        const aiMessage = await db
+          .insert(messages)
+          .values({
+            chatroomId: chatroomId,
+            userId: null, // AI messages have null userId
+            content: fullResponse,
+            isAiMessage: true,
+            aiModel: "gpt-4o-mini",
+          })
+          .returning();
+
+        // Broadcast complete AI message to PartyKit
+        try {
+          const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+          if (!apiKey) {
+            console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          } else {
+            await fetch(
+              `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-message`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                  message: fullResponse,
+                  chatroomId: chatroomId.toString(),
+                  timestamp: Date.now(),
+                }),
+              }
+            );
+          }
+        } catch (error) {
+          console.error("Failed to broadcast AI message to PartyKit:", error);
+        }
+
+        // Broadcast completion to PartyKit
+        try {
+          const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+          if (apiKey) {
+            await fetch(
+              `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/ai-stream`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                  type: "complete",
+                  chatroomId: chatroomId.toString(),
+                  streamId,
+                  messageId: aiMessage[0].id,
+                  timestamp: Date.now(),
+                }),
+              }
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Failed to broadcast stream completion to PartyKit:",
+            error
+          );
+        }
+
+        // Send completion signal
+        controller.enqueue(
+          new TextEncoder().encode(
+            `data: ${JSON.stringify({
+              complete: true,
+              messageId: aiMessage[0].id,
+            })}\n\n`
+          )
+        );
+
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.error("Error generating AI response:", error);

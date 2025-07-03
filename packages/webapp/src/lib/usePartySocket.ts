@@ -15,6 +15,13 @@ export interface PartyMessage {
   isAiMessage?: boolean;
 }
 
+export interface StreamingAiMessage {
+  streamId: string;
+  content: string;
+  isActive: boolean;
+  timestamp: number;
+}
+
 export interface SettingsUpdateMessage {
   type: "settings-update";
   settings: {
@@ -40,6 +47,8 @@ export function usePartySocket({
   onSettingsUpdate?: (update: SettingsUpdateMessage) => void;
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
+  const [streamingAiMessage, setStreamingAiMessage] =
+    useState<StreamingAiMessage | null>(null);
   const connRef = useRef<PartySocket | null>(null);
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
@@ -63,6 +72,40 @@ export function usePartySocket({
           // Handle settings updates
           if (data.type === "settings-update" && onSettingsUpdate) {
             onSettingsUpdate(data as SettingsUpdateMessage);
+            return;
+          }
+
+          // Handle AI streaming events
+          if (data.type === "ai-stream") {
+            if (data.streamType === "start") {
+              setStreamingAiMessage({
+                streamId: data.streamId,
+                content: "",
+                isActive: true,
+                timestamp: data.timestamp,
+              });
+            } else if (data.streamType === "token") {
+              setStreamingAiMessage((prev) => {
+                if (!prev || prev.streamId !== data.streamId) return prev;
+                return {
+                  ...prev,
+                  content: prev.content + data.token,
+                  timestamp: data.timestamp,
+                };
+              });
+            } else if (data.streamType === "complete") {
+              setStreamingAiMessage((prev) => {
+                if (!prev || prev.streamId !== data.streamId) return prev;
+                return {
+                  ...prev,
+                  isActive: false,
+                };
+              });
+              // Clear streaming message after a delay
+              setTimeout(() => {
+                setStreamingAiMessage(null);
+              }, 500);
+            }
             return;
           }
 
@@ -98,5 +141,5 @@ export function usePartySocket({
     setMessages([]);
   }, []);
 
-  return { messages, sendMessage, clearMessages };
+  return { messages, sendMessage, clearMessages, streamingAiMessage };
 }

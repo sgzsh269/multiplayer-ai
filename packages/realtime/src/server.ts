@@ -87,6 +87,66 @@ export default class Server implements Party.Server {
       }
     }
 
+    // Handle AI streaming tokens
+    if (req.method === "POST" && req.url.includes("/ai-stream")) {
+      try {
+        // Verify API key authentication
+        const authHeader = req.headers.get("authorization");
+        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+
+        if (!expectedApiKey) {
+          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          return new Response("Server configuration error", { status: 500 });
+        }
+
+        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
+          console.warn("Unauthorized AI stream broadcast attempt");
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const body = (await req.json()) as {
+          type: "token" | "start" | "complete";
+          token?: string;
+          chatroomId: string;
+          streamId: string;
+          messageId?: string;
+          timestamp?: number;
+        };
+
+        // Additional validation
+        if (!body.type || !body.chatroomId || !body.streamId) {
+          return new Response("Invalid request payload", { status: 400 });
+        }
+
+        // Ensure the chatroomId matches the room
+        if (body.chatroomId !== this.room.id) {
+          console.warn(
+            `Chatroom ID mismatch: ${body.chatroomId} vs ${this.room.id}`
+          );
+          return new Response("Chatroom ID mismatch", { status: 400 });
+        }
+
+        // Broadcast streaming event to all connected clients
+        this.room.broadcast(
+          JSON.stringify({
+            type: "ai-stream",
+            streamType: body.type,
+            token: body.token,
+            streamId: body.streamId,
+            messageId: body.messageId,
+            timestamp: body.timestamp || Date.now(),
+            chatroomId: body.chatroomId,
+            receivedAt: Date.now(),
+          })
+        );
+
+        return new Response("AI stream broadcasted", { status: 200 });
+      } catch (e) {
+        console.error("Error broadcasting AI stream:", e);
+        return new Response("Error broadcasting AI stream", { status: 500 });
+      }
+    }
+
     // Handle settings update broadcasts from backend
     if (req.method === "POST" && req.url.includes("/settings-update")) {
       try {
