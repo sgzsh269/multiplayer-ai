@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db/client";
-import { messages, users } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { messages, users, chatroom_members } from "@/db/schema";
+import { eq, asc, and } from "drizzle-orm";
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
   const { params } = await context;
-  const { userId } = await auth();
   const chatroomId = params.id;
-
-  if (!chatroomId) {
-    return NextResponse.json(
-      { error: "Chatroom ID is required" },
-      { status: 400 }
-    );
-  }
 
   try {
     const chatMessages = await db
@@ -59,7 +51,76 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching chatroom messages:", error);
     return NextResponse.json(
-      { error: "Failed to fetch chatroom messages" },
+      { error: "Failed to fetch messages" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
+) {
+  const { params } = await context;
+  const chatroomId = parseInt(params.id);
+
+  try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Find the user in the database
+    const user = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId));
+
+    if (!user[0]) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if the user is an admin of this chatroom
+    const membership = await db
+      .select({ role: chatroom_members.role })
+      .from(chatroom_members)
+      .where(
+        and(
+          eq(chatroom_members.chatroomId, chatroomId),
+          eq(chatroom_members.userId, user[0].id)
+        )
+      )
+      .limit(1);
+
+    if (!membership[0]) {
+      return NextResponse.json(
+        { error: "Not a member of this chatroom" },
+        { status: 403 }
+      );
+    }
+
+    if (membership[0].role !== "admin") {
+      return NextResponse.json(
+        { error: "Only admins can delete all messages" },
+        { status: 403 }
+      );
+    }
+
+    // Delete all messages in the chatroom
+    const deletedMessages = await db
+      .delete(messages)
+      .where(eq(messages.chatroomId, chatroomId))
+      .returning({ id: messages.id });
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: deletedMessages.length,
+      message: "All messages deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting all messages:", error);
+    return NextResponse.json(
+      { error: "Failed to delete messages" },
       { status: 500 }
     );
   }

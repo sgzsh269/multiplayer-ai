@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import {
   Download,
   Share2,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -149,6 +150,7 @@ export default function ChatroomDetailPage({
   const [isSystemMessageModalOpen, setIsSystemMessageModalOpen] =
     useState(false);
   const [tempSystemMessage, setTempSystemMessage] = useState("");
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -278,6 +280,28 @@ export default function ChatroomDetailPage({
     },
   });
 
+  const deleteAllMessagesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/messages`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete messages");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refetch chatroom data to update the messages list
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      setIsDeleteConfirmOpen(false);
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete messages:", error);
+      alert(`Failed to delete messages: ${error.message}`);
+    },
+  });
+
   // Modal functions for AI system message editing
   const handleOpenSystemMessageModal = () => {
     setTempSystemMessage(aiSettings.aiSystemMessage || "");
@@ -302,6 +326,15 @@ export default function ChatroomDetailPage({
         clerkUser?.username ||
         clerkUser?.emailAddresses?.[0]?.emailAddress ||
         "User";
+
+  // Check if current user is admin
+  const isCurrentUserAdmin = useMemo(() => {
+    if (!clerkUser || !chatroom) return false;
+    const userParticipant = chatroom.participants.find(
+      (p) => p.name === displayName
+    );
+    return userParticipant?.role === "admin";
+  }, [clerkUser, chatroom, displayName]);
 
   // Function to render message content with highlighted @AI mentions
   const renderMessageContent = (content: string) => {
@@ -587,10 +620,6 @@ export default function ChatroomDetailPage({
           </Link>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{chatroom.name}</h1>
-            <p className="text-sm text-gray-500">
-              Started {chatroom.startedAgo} - {chatroom.participantsActive}{" "}
-              participants active
-            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -603,7 +632,7 @@ export default function ChatroomDetailPage({
             }
           >
             <Share2 className="w-4 h-4 mr-2" />
-            {linkCopied ? "Link Copied!" : "Share Link"}
+            {linkCopied ? "Link Copied!" : "Share Invite Link"}
           </Button>
         </div>
       </header>
@@ -859,6 +888,30 @@ export default function ChatroomDetailPage({
               </Button>
             </div>
           </div>
+
+          {/* Admin Actions */}
+          {isCurrentUserAdmin && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Admin Actions
+                </h2>
+                <Settings className="w-5 h-5 text-gray-500" />
+              </div>
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                  disabled={deleteAllMessagesMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All Messages
+                </Button>
+              </div>
+            </div>
+          )}
         </aside>
       </div>
 
@@ -905,6 +958,51 @@ export default function ChatroomDetailPage({
               {updateAiSettingsMutation.isPending
                 ? "Saving..."
                 : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete All Messages Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">
+              Delete All Messages
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete all messages in this chatroom?
+              This action cannot be undone and will permanently remove all
+              conversation history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <Trash2 className="w-5 h-5 text-red-600 mr-2" />
+                <span className="text-sm font-medium text-red-800">
+                  This will delete all {chatroom?.messages?.length || 0}{" "}
+                  messages
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              disabled={deleteAllMessagesMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteAllMessagesMutation.mutate()}
+              disabled={deleteAllMessagesMutation.isPending}
+            >
+              {deleteAllMessagesMutation.isPending
+                ? "Deleting..."
+                : "Delete All Messages"}
             </Button>
           </DialogFooter>
         </DialogContent>
