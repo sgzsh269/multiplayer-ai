@@ -25,7 +25,7 @@ export const chatrooms = pgTable("chatrooms", {
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // AI Assistant settings
-  aiMode: text("ai_mode").default("reactive").notNull(), // "reactive" or "summoned"
+  aiMode: text("ai_mode").default("auto-respond").notNull(), // "auto-respond" or "summoned"
   aiEnabled: boolean("ai_enabled").default(true).notNull(),
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "chatrooms" ALTER COLUMN "ai_mode" SET DEFAULT 'auto-respond';

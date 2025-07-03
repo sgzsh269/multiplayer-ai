@@ -103,9 +103,41 @@ export default function Dashboard() {
   const [joinId, setJoinId] = useState("");
   const [joinError, setJoinError] = useState("");
   const joinChatroom = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: string) => {
       setJoinError("");
-      const res = await fetch(`/api/chatrooms/${id}/join`, { method: "POST" });
+
+      // Extract chatroom ID from input (could be full URL or just ID)
+      let chatroomId = input.trim();
+
+      // Check if input is a URL and extract ID from it
+      try {
+        if (chatroomId.startsWith("http")) {
+          const url = new URL(chatroomId);
+          const pathMatch = url.pathname.match(/\/chatrooms\/(\d+)/);
+          if (pathMatch) {
+            chatroomId = pathMatch[1];
+          } else {
+            throw new Error("Invalid chatroom URL format");
+          }
+        }
+        // If not a URL, assume it's already an ID
+      } catch (error) {
+        if (chatroomId.startsWith("http")) {
+          setJoinError("Invalid chatroom URL format");
+          throw new Error("Invalid chatroom URL format");
+        }
+        // If not a URL but parsing failed, continue with original input
+      }
+
+      // Validate that we have a numeric ID
+      if (!/^\d+$/.test(chatroomId)) {
+        setJoinError("Please enter a valid chatroom ID or URL");
+        throw new Error("Invalid chatroom ID format");
+      }
+
+      const res = await fetch(`/api/chatrooms/${chatroomId}/join`, {
+        method: "POST",
+      });
       if (!res.ok) {
         const err = await res.json();
         setJoinError(err.error || "Failed to join chatroom");
@@ -113,10 +145,28 @@ export default function Dashboard() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       setIsJoinSessionOpen(false);
       setJoinId("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
+
+      // Extract the chatroom ID and navigate to it
+      let chatroomId = variables.trim();
+      if (chatroomId.startsWith("http")) {
+        try {
+          const url = new URL(chatroomId);
+          const pathMatch = url.pathname.match(/\/chatrooms\/(\d+)/);
+          if (pathMatch) {
+            chatroomId = pathMatch[1];
+          }
+        } catch (error) {
+          // If extraction fails, don't navigate
+          return;
+        }
+      }
+
+      // Navigate to the joined chatroom
+      router.push(`/chatrooms/${chatroomId}`);
     },
   });
 
@@ -356,7 +406,7 @@ export default function Dashboard() {
                         Session ID or Invitation Link
                       </label>
                       <Input
-                        placeholder="sess_abc123 or https://..."
+                        placeholder="123 or http://localhost:3000/chatrooms/123"
                         value={joinId}
                         onChange={(e) => setJoinId(e.target.value)}
                       />

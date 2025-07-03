@@ -58,9 +58,9 @@ export async function PATCH(
   const { aiMode, aiEnabled } = await req.json();
 
   // Validate aiMode
-  if (aiMode && !["reactive", "summoned"].includes(aiMode)) {
+  if (aiMode && !["auto-respond", "summoned"].includes(aiMode)) {
     return NextResponse.json(
-      { error: "Invalid AI mode. Must be 'reactive' or 'summoned'" },
+      { error: "Invalid AI mode. Must be 'auto-respond' or 'summoned'" },
       { status: 400 }
     );
   }

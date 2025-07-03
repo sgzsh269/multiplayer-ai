@@ -55,7 +55,7 @@ export async function POST(
     // Check if AI should respond based on mode and trigger
     const aiMode = chatroom[0].aiMode;
     const shouldRespond =
-      aiMode === "reactive" ||
+      aiMode === "auto-respond" ||
       (aiMode === "summoned" &&
         (triggerType === "mention" || triggerType === "manual"));
 

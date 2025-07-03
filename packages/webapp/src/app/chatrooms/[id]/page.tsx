@@ -7,7 +7,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Pause,
-  UserPlus,
   MoreHorizontal,
   Paperclip,
   Image,
@@ -71,7 +70,7 @@ interface ChatroomDetails {
     aiInteractions: number;
   };
   aiSettings?: {
-    aiMode: "reactive" | "summoned";
+    aiMode: "auto-respond" | "summoned";
     aiEnabled: boolean;
   };
 }
@@ -113,9 +112,10 @@ export default function ChatroomDetailPage({
   const queryClient = useQueryClient();
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
   const [aiSettings, setAiSettings] = useState({
-    aiMode: "reactive" as "reactive" | "summoned",
+    aiMode: "auto-respond" as "auto-respond" | "summoned",
     aiEnabled: true,
   });
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -186,6 +186,32 @@ export default function ChatroomDetailPage({
     clerkUser?.username ||
     clerkUser?.emailAddresses?.[0]?.emailAddress ||
     "User";
+
+  // Share link functionality
+  const handleShareLink = async () => {
+    const shareUrl = `${window.location.origin}/chatrooms/${chatroomId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000); // Reset after 2 seconds
+    } catch (error) {
+      console.error("Failed to copy link:", error);
+      // Fallback: select and copy using document.execCommand
+      const textArea = document.createElement("textarea");
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      } catch (fallbackError) {
+        console.error("Fallback copy failed:", fallbackError);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
 
   // Add PartyKit real-time messaging
   const {
@@ -278,13 +304,13 @@ export default function ChatroomDetailPage({
       const hasAiMention = content.toLowerCase().includes("@ai");
       const shouldTriggerAi =
         aiSettings.aiEnabled &&
-        (aiSettings.aiMode === "reactive" ||
+        (aiSettings.aiMode === "auto-respond" ||
           (aiSettings.aiMode === "summoned" && hasAiMention));
 
       if (shouldTriggerAi) {
         // Trigger AI response with a small delay to ensure user message is processed first
         setTimeout(() => {
-          const triggerType = hasAiMention ? "mention" : "reactive";
+          const triggerType = hasAiMention ? "mention" : "auto-respond";
           aiResponseMutation.mutate({
             message: content,
             triggerType,
@@ -333,8 +359,8 @@ export default function ChatroomDetailPage({
             <span className="text-sm font-medium text-purple-700">
               AI{" "}
               {aiSettings.aiEnabled
-                ? aiSettings.aiMode === "reactive"
-                  ? "Reactive"
+                ? aiSettings.aiMode === "auto-respond"
+                  ? "Auto-respond"
                   : "Summoned"
                 : "Off"}
             </span>
@@ -360,13 +386,13 @@ export default function ChatroomDetailPage({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
-                    updateAiSettingsMutation.mutate({ aiMode: "reactive" })
+                    updateAiSettingsMutation.mutate({ aiMode: "auto-respond" })
                   }
                   className={
-                    aiSettings.aiMode === "reactive" ? "bg-purple-50" : ""
+                    aiSettings.aiMode === "auto-respond" ? "bg-purple-50" : ""
                   }
                 >
-                  Reactive Mode (Auto-respond)
+                  Auto-respond Mode
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
@@ -382,9 +408,16 @@ export default function ChatroomDetailPage({
             </DropdownMenu>
           </div>
 
-          <Button variant="outline" size="sm">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Invite
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShareLink}
+            className={
+              linkCopied ? "bg-green-50 border-green-200 text-green-700" : ""
+            }
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            {linkCopied ? "Link Copied!" : "Share Link"}
           </Button>
         </div>
       </header>
@@ -470,8 +503,8 @@ export default function ChatroomDetailPage({
               <Input
                 placeholder={
                   aiSettings.aiEnabled
-                    ? aiSettings.aiMode === "reactive"
-                      ? "Type your message - AI will respond automatically..."
+                    ? aiSettings.aiMode === "auto-respond"
+                      ? "Type your message - AI will auto-respond..."
                       : "Type your message or @AI to get AI assistance..."
                     : "Type your message to collaborate with your team..."
                 }
@@ -498,22 +531,8 @@ export default function ChatroomDetailPage({
                 <Send className="w-5 h-5" />
               </Button>
             </div>
-            <div className="flex justify-between items-center text-xs text-gray-500 mt-2 px-1">
+            <div className="flex justify-center items-center text-xs text-gray-500 mt-2 px-1">
               <span>Press Enter to send, Shift+Enter for new line</span>
-              <span>{chatroom.participantsActive} participants online</span>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 flex items-center space-x-1">
-              <span>Console</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 px-1">
-                    <MoreHorizontal className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem>Clear Console</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </main>
