@@ -68,7 +68,14 @@ export async function PATCH(
 
   try {
     // Get user from Clerk ID
-    const user = await db.select().from(users).where(eq(users.clerkId, userId));
+    const user = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(users)
+      .where(eq(users.clerkId, userId));
     if (!user[0]) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -137,7 +144,10 @@ export async function PATCH(
               timestamp: Date.now(),
               updatedBy: {
                 id: user[0].id,
-                displayName: user[0].displayName,
+                displayName:
+                  user[0].firstName && user[0].lastName
+                    ? `${user[0].firstName} ${user[0].lastName}`
+                    : user[0].firstName || user[0].lastName || "User",
               },
             }),
           }

@@ -183,11 +183,8 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clerkId: user.id,
-          displayName:
-            user.firstName ||
-            user.username ||
-            user.emailAddresses?.[0]?.emailAddress ||
-            "User",
+          firstName: user.firstName || null,
+          lastName: user.lastName || null,
           avatarUrl: user.imageUrl || null,
         }),
       });

@@ -27,18 +27,35 @@ export async function GET(
         createdAt: messages.createdAt,
         isAiMessage: messages.isAiMessage,
         aiModel: messages.aiModel,
-        sender: {
-          id: users.id,
-          name: users.displayName,
-          avatarUrl: users.avatarUrl,
-        },
+        senderId: users.id,
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
+        senderAvatarUrl: users.avatarUrl,
       })
       .from(messages)
       .leftJoin(users, eq(messages.userId, users.id))
       .where(eq(messages.chatroomId, parseInt(chatroomId)))
       .orderBy(asc(messages.createdAt));
 
-    return NextResponse.json({ messages: chatMessages });
+    const formattedMessages = chatMessages.map((msg) => ({
+      ...msg,
+      sender: {
+        id: msg.senderId,
+        name:
+          msg.senderFirstName && msg.senderLastName
+            ? `${msg.senderFirstName} ${msg.senderLastName}`
+            : msg.senderFirstName || msg.senderLastName || "User",
+        firstName: msg.senderFirstName,
+        lastName: msg.senderLastName,
+        avatarUrl: msg.senderAvatarUrl,
+      },
+      senderId: undefined,
+      senderFirstName: undefined,
+      senderLastName: undefined,
+      senderAvatarUrl: undefined,
+    }));
+
+    return NextResponse.json({ messages: formattedMessages });
   } catch (error) {
     console.error("Error fetching chatroom messages:", error);
     return NextResponse.json(

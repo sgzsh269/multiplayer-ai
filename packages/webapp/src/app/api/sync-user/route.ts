@@ -7,7 +7,8 @@ import { auth } from "@clerk/nextjs/server";
 
 const userSchema = z.object({
   clerkId: z.string(),
-  displayName: z.string(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
   avatarUrl: z.string().nullable().optional(),
 });
 
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return new Response("Invalid user data", { status: 400 });
     }
-    const { clerkId, displayName, avatarUrl } = parsed.data;
+    const { clerkId, firstName, lastName, avatarUrl } = parsed.data;
 
     // Ensure the authenticated user can only sync their own data
     if (clerkUserId !== clerkId) {
@@ -39,18 +40,24 @@ export async function POST(req: NextRequest) {
       .from(users)
       .where(eq(users.clerkId, clerkId));
     if (existing.length > 0) {
-      // Update if displayName or avatarUrl changed
+      // Update if any fields changed
       const user = existing[0];
-      if (user.displayName !== displayName || user.avatarUrl !== avatarUrl) {
+      if (
+        user.firstName !== firstName ||
+        user.lastName !== lastName ||
+        user.avatarUrl !== avatarUrl
+      ) {
         await db
           .update(users)
-          .set({ displayName, avatarUrl })
+          .set({ firstName, lastName, avatarUrl })
           .where(eq(users.clerkId, clerkId));
       }
       return new Response("User updated", { status: 200 });
     } else {
       // Insert new user
-      await db.insert(users).values({ clerkId, displayName, avatarUrl });
+      await db
+        .insert(users)
+        .values({ clerkId, firstName, lastName, avatarUrl });
       return new Response("User created", { status: 201 });
     }
   } catch (err) {

@@ -72,9 +72,8 @@ export async function POST(
         content: messages.content,
         isAiMessage: messages.isAiMessage,
         createdAt: messages.createdAt,
-        sender: {
-          name: users.displayName,
-        },
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
       })
       .from(messages)
       .leftJoin(users, eq(messages.userId, users.id))

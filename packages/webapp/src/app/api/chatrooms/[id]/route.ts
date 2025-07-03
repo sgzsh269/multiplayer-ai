@@ -64,11 +64,12 @@ export async function GET(
       );
     }
 
-    // Get chatroom members with their display names, assuming all are online for MVP
+    // Get chatroom members with their first and last names, assuming all are online for MVP
     const chatroomMembers = await db
       .select({
         id: users.id,
-        displayName: users.displayName,
+        firstName: users.firstName,
+        lastName: users.lastName,
         avatarUrl: users.avatarUrl,
         role: chatroom_members.role,
       })
@@ -85,7 +86,8 @@ export async function GET(
         isAiMessage: messages.isAiMessage,
         aiModel: messages.aiModel,
         senderId: users.id,
-        senderDisplayName: users.displayName,
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
         senderAvatarUrl: users.avatarUrl,
       })
       .from(messages)
@@ -102,17 +104,19 @@ export async function GET(
     // Format timestamps and avatar initials
     const formattedParticipants = chatroomMembers.map((p) => ({
       id: p.id,
-      name: p.displayName,
+      name:
+        p.firstName && p.lastName
+          ? `${p.firstName} ${p.lastName}`
+          : p.firstName || p.lastName || "User",
       role: p.role,
       isOnline: true, // Mock for MVP
       isTyping: false, // Mock for MVP
-      avatarInitials: p.displayName
-        ? p.displayName
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-        : "",
+      avatarInitials:
+        p.firstName && p.lastName
+          ? `${p.firstName[0]}${p.lastName[0]}`.toUpperCase()
+          : p.firstName
+          ? p.firstName[0].toUpperCase()
+          : "U",
     }));
 
     const formattedMessages = chatroomMessages.map((msg) => ({
@@ -125,7 +129,12 @@ export async function GET(
           }
         : {
             id: msg.senderId,
-            name: msg.senderDisplayName,
+            name:
+              msg.senderFirstName && msg.senderLastName
+                ? `${msg.senderFirstName} ${msg.senderLastName}`
+                : msg.senderFirstName || msg.senderLastName || "User",
+            firstName: msg.senderFirstName,
+            lastName: msg.senderLastName,
             avatarUrl: msg.senderAvatarUrl,
           },
       createdAt: msg.createdAt,

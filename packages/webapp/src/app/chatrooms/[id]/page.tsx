@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Pause,
   MoreHorizontal,
-  Paperclip,
-  Image,
   Send,
   Users,
   MessageSquare,
@@ -63,6 +61,8 @@ interface Message {
   sender: {
     id: string;
     name: string;
+    firstName?: string;
+    lastName?: string;
     avatarUrl?: string;
   } | null;
   timestamp?: string;
@@ -296,10 +296,12 @@ export default function ChatroomDetailPage({
 
   const { user: clerkUser } = useUser();
   const displayName =
-    clerkUser?.firstName ||
-    clerkUser?.username ||
-    clerkUser?.emailAddresses?.[0]?.emailAddress ||
-    "User";
+    clerkUser?.firstName && clerkUser?.lastName
+      ? `${clerkUser.firstName} ${clerkUser.lastName}`
+      : clerkUser?.firstName ||
+        clerkUser?.username ||
+        clerkUser?.emailAddresses?.[0]?.emailAddress ||
+        "User";
 
   // Function to render message content with highlighted @AI mentions
   const renderMessageContent = (content: string) => {
@@ -592,19 +594,6 @@ export default function ChatroomDetailPage({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {/* AI Status & Controls */}
-          <div className="flex items-center space-x-2 px-3 py-1 bg-purple-50 rounded-lg border border-purple-200">
-            <Brain className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-medium text-purple-700">
-              AI{" "}
-              {aiSettings.aiEnabled
-                ? aiSettings.aiMode === "auto-respond"
-                  ? "Auto-respond"
-                  : "Summoned"
-                : "Off"}
-            </span>
-          </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -629,12 +618,16 @@ export default function ChatroomDetailPage({
                 message.isAiMessage || message.sender?.id === "ai-assistant";
               const senderName = message.sender?.name || "Unknown User";
               const avatarInitials =
-                senderName
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2) || "U";
+                message.sender?.firstName && message.sender?.lastName
+                  ? `${message.sender.firstName[0]}${message.sender.lastName[0]}`.toUpperCase()
+                  : message.sender?.firstName
+                  ? message.sender.firstName[0].toUpperCase()
+                  : senderName
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2) || "U";
 
               return (
                 <div
@@ -726,12 +719,6 @@ export default function ChatroomDetailPage({
                   }}
                 />
               </div>
-              <Button variant="ghost" size="icon">
-                <Paperclip className="w-5 h-5 text-gray-500" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Image className="w-5 h-5 text-gray-500" />
-              </Button>
               <Button
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                 onClick={handleSendMessage}
@@ -767,11 +754,6 @@ export default function ChatroomDetailPage({
                         {participant.avatarInitials}
                       </AvatarFallback>
                     </Avatar>
-                    <span
-                      className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white ${
-                        participant.isOnline ? "bg-green-500" : "bg-gray-400"
-                      }`}
-                    ></span>
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">

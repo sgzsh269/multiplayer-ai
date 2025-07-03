@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/clerk-sdk-node";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
   req: NextRequest,
@@ -9,8 +9,8 @@ export async function GET(
   const { userId } = await auth();
   return NextResponse.json({
     members: [
-      { id: 1, displayName: "Alice", role: "admin" },
-      { id: 2, displayName: "Bob", role: "member" },
+      { id: 1, firstName: "Alice", lastName: null, role: "admin" },
+      { id: 2, firstName: "Bob", lastName: null, role: "member" },
     ],
   });
 }
