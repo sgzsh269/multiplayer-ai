@@ -162,6 +162,7 @@ export async function GET(
         aiSettings: {
           aiMode: chatroom.aiMode,
           aiEnabled: chatroom.aiEnabled,
+          aiSystemMessage: chatroom.aiSystemMessage,
         },
       },
     });

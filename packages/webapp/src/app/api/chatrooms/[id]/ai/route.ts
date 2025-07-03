@@ -92,7 +92,9 @@ export async function POST(
     }> = [
       {
         role: "system",
-        content: `You are a helpful AI assistant in a collaborative chatroom called "${chatroom[0].name}". 
+        content:
+          chatroom[0].aiSystemMessage ||
+          `You are a helpful AI assistant in a collaborative chatroom called "${chatroom[0].name}". 
 You can see the conversation history and should provide helpful, relevant responses to user questions.
 Be concise but informative. You're part of a team discussion, so be collaborative and supportive.`,
       },

@@ -21,6 +21,7 @@ export async function GET(
       .select({
         aiMode: chatrooms.aiMode,
         aiEnabled: chatrooms.aiEnabled,
+        aiSystemMessage: chatrooms.aiSystemMessage,
       })
       .from(chatrooms)
       .where(eq(chatrooms.id, chatroomId))
@@ -55,7 +56,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { aiMode, aiEnabled } = await req.json();
+  const { aiMode, aiEnabled, aiSystemMessage } = await req.json();
 
   // Validate aiMode
   if (aiMode && !["auto-respond", "summoned"].includes(aiMode)) {
@@ -95,6 +96,8 @@ export async function PATCH(
     const updateData: any = {};
     if (aiMode !== undefined) updateData.aiMode = aiMode;
     if (aiEnabled !== undefined) updateData.aiEnabled = aiEnabled;
+    if (aiSystemMessage !== undefined)
+      updateData.aiSystemMessage = aiSystemMessage;
 
     const updatedChatroom = await db
       .update(chatrooms)
@@ -103,6 +106,7 @@ export async function PATCH(
       .returning({
         aiMode: chatrooms.aiMode,
         aiEnabled: chatrooms.aiEnabled,
+        aiSystemMessage: chatrooms.aiSystemMessage,
       });
 
     if (!updatedChatroom[0]) {

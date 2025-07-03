@@ -1,0 +1,1 @@
+ALTER TABLE "chatrooms" ADD COLUMN "ai_system_message" text DEFAULT 'You are a helpful AI assistant in a collaborative chatroom. You can see the conversation history and should provide helpful, relevant responses to user questions. Be concise but informative. You''re part of a team discussion, so be collaborative and supportive.';

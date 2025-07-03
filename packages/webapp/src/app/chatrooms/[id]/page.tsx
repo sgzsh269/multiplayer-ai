@@ -17,10 +17,21 @@ import {
   Brain,
   Download,
   Share2,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,6 +88,7 @@ interface ChatroomDetails {
   aiSettings?: {
     aiMode: "auto-respond" | "summoned";
     aiEnabled: boolean;
+    aiSystemMessage?: string;
   };
 }
 
@@ -119,6 +131,7 @@ export default function ChatroomDetailPage({
   const [aiSettings, setAiSettings] = useState({
     aiMode: "auto-respond" as "auto-respond" | "summoned",
     aiEnabled: true,
+    aiSystemMessage: "",
   });
   const [linkCopied, setLinkCopied] = useState(false);
   const [settingsNotification, setSettingsNotification] = useState<{
@@ -131,6 +144,11 @@ export default function ChatroomDetailPage({
     isStreaming: boolean;
     messageId?: string;
   }>({ content: "", isStreaming: false });
+
+  // Modal state for AI system message editing
+  const [isSystemMessageModalOpen, setIsSystemMessageModalOpen] =
+    useState(false);
+  const [tempSystemMessage, setTempSystemMessage] = useState("");
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -237,7 +255,11 @@ export default function ChatroomDetailPage({
   });
 
   const updateAiSettingsMutation = useMutation({
-    mutationFn: async (settings: { aiMode?: string; aiEnabled?: boolean }) => {
+    mutationFn: async (settings: {
+      aiMode?: string;
+      aiEnabled?: boolean;
+      aiSystemMessage?: string;
+    }) => {
       const res = await fetch(`/api/chatrooms/${chatroomId}/settings`, {
         method: "PATCH",
         headers: {
@@ -249,9 +271,28 @@ export default function ChatroomDetailPage({
       return res.json();
     },
     onSuccess: (data) => {
-      setAiSettings(data.settings);
+      setAiSettings({
+        ...data.settings,
+        aiSystemMessage: data.settings.aiSystemMessage || "",
+      });
     },
   });
+
+  // Modal functions for AI system message editing
+  const handleOpenSystemMessageModal = () => {
+    setTempSystemMessage(aiSettings.aiSystemMessage || "");
+    setIsSystemMessageModalOpen(true);
+  };
+
+  const handleSaveSystemMessage = () => {
+    updateAiSettingsMutation.mutate({ aiSystemMessage: tempSystemMessage });
+    setIsSystemMessageModalOpen(false);
+  };
+
+  const handleCancelSystemMessage = () => {
+    setTempSystemMessage("");
+    setIsSystemMessageModalOpen(false);
+  };
 
   const { user: clerkUser } = useUser();
   const displayName =
@@ -358,7 +399,10 @@ export default function ChatroomDetailPage({
 
       // Load AI settings if available
       if (chatroom.aiSettings) {
-        setAiSettings(chatroom.aiSettings);
+        setAiSettings({
+          ...chatroom.aiSettings,
+          aiSystemMessage: chatroom.aiSettings.aiSystemMessage || "",
+        });
       }
     }
   }, [chatroom, clearMessages]);
@@ -559,48 +603,6 @@ export default function ChatroomDetailPage({
                   : "Summoned"
                 : "Off"}
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-1 text-purple-600"
-                >
-                  <MoreHorizontal className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() =>
-                    updateAiSettingsMutation.mutate({
-                      aiEnabled: !aiSettings.aiEnabled,
-                    })
-                  }
-                >
-                  {aiSettings.aiEnabled ? "Disable" : "Enable"} AI Assistant
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    updateAiSettingsMutation.mutate({ aiMode: "auto-respond" })
-                  }
-                  className={
-                    aiSettings.aiMode === "auto-respond" ? "bg-purple-50" : ""
-                  }
-                >
-                  Auto-respond Mode
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    updateAiSettingsMutation.mutate({ aiMode: "summoned" })
-                  }
-                  className={
-                    aiSettings.aiMode === "summoned" ? "bg-purple-50" : ""
-                  }
-                >
-                  Summoned Mode (@AI only)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           <Button
@@ -784,8 +786,147 @@ export default function ChatroomDetailPage({
               ))}
             </div>
           </div>
+
+          {/* AI Settings */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                AI Settings
+              </h2>
+              <Brain className="w-5 h-5 text-gray-500" />
+            </div>
+            <div className="space-y-3">
+              {/* AI Mode Dropdown */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-700">
+                  AI Assistant Mode
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      disabled={updateAiSettingsMutation.isPending}
+                    >
+                      <span>
+                        {!aiSettings.aiEnabled
+                          ? "Disabled"
+                          : aiSettings.aiMode === "auto-respond"
+                          ? "Auto-respond Mode"
+                          : "Summoned Mode (@AI only)"}
+                      </span>
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-full">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateAiSettingsMutation.mutate({
+                          aiEnabled: false,
+                        })
+                      }
+                      className={!aiSettings.aiEnabled ? "bg-gray-50" : ""}
+                    >
+                      Disabled
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateAiSettingsMutation.mutate({
+                          aiEnabled: true,
+                          aiMode: "auto-respond",
+                        })
+                      }
+                      className={
+                        aiSettings.aiEnabled &&
+                        aiSettings.aiMode === "auto-respond"
+                          ? "bg-gray-50"
+                          : ""
+                      }
+                    >
+                      Auto-respond Mode
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateAiSettingsMutation.mutate({
+                          aiEnabled: true,
+                          aiMode: "summoned",
+                        })
+                      }
+                      className={
+                        aiSettings.aiEnabled && aiSettings.aiMode === "summoned"
+                          ? "bg-gray-50"
+                          : ""
+                      }
+                    >
+                      Summoned Mode (@AI only)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Edit System Message Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenSystemMessageModal}
+                className="w-full justify-start"
+                disabled={updateAiSettingsMutation.isPending}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Edit System Message
+              </Button>
+            </div>
+          </div>
         </aside>
       </div>
+
+      {/* AI System Message Modal */}
+      <Dialog
+        open={isSystemMessageModalOpen}
+        onOpenChange={setIsSystemMessageModalOpen}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit AI System Message</DialogTitle>
+            <DialogDescription>
+              Customize how the AI assistant behaves in this chatroom by editing
+              its system message.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="system-message" className="text-sm font-medium">
+                System Message
+              </label>
+              <Textarea
+                id="system-message"
+                placeholder="Enter the system message that defines how the AI assistant should behave..."
+                className="min-h-[150px]"
+                value={tempSystemMessage}
+                onChange={(e) => setTempSystemMessage(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                This message tells the AI how to behave. For example: "You are a
+                helpful coding assistant. Always provide code examples and
+                explain your reasoning."
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelSystemMessage}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveSystemMessage}
+              disabled={updateAiSettingsMutation.isPending}
+            >
+              {updateAiSettingsMutation.isPending
+                ? "Saving..."
+                : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

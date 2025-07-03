@@ -43,6 +43,13 @@
       "when": 1751524838484,
       "tag": "0005_fresh_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1751550589086,
+      "tag": "0006_stale_makkari",
+      "breakpoints": true
     }
   ]
 }
