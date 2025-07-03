@@ -87,8 +87,9 @@ PROJECT PLAN
 - [x] **4.2** Frontend: UI to create/join/list chatrooms.
 - [x] **4.3** Frontend: Fetch and display chatroom details (name, started ago, active participants).
 - [x] **4.4** Frontend: Display participants list in the chatroom sidebar.
-- [ ] **4.5** Presence: Show online users in a room (basic implementation).
-- [ ] **4.6** E2E test: User can create a room, join it, and see themselves listed.
+- [x] **4.5** Frontend: Clean and simplified chatroom interface (removed file upload buttons, time duration, participant count).
+- [ ] **4.6** Presence: Show online users in a room (basic implementation).
+- [ ] **4.7** E2E test: User can create a room, join it, and see themselves listed.
 
 ---
 
@@ -101,9 +102,10 @@ PROJECT PLAN
 - [x] **5.4a** Frontend: Fix message duplication issues between API and PartyKit sources.
 - [x] **5.4b** Frontend: Fix sender identity issues for real-time messages.
 - [x] **5.4c** Frontend: Implement smart auto-scroll (only for message sender, not recipients).
+- [x] **5.4d** Frontend: Improved message input with multiline textarea, Shift+Enter support, and better UX.
 - [ ] **5.5** Presence: Show who is typing.
-- [ ] **5.7** E2E test: Two users can chat in real time in the same room.
-- [ ] **5.6** Frontend: Implement UI for file and image attachments (paperclip, image buttons).
+- [ ] **5.6** E2E test: Two users can chat in real time in the same room.
+- [ ] **5.7** Frontend: Implement UI for file and image attachments (paperclip, image buttons).
 
 #### 5A. PartyKit Integration for Real-Time Messaging
 
@@ -116,12 +118,12 @@ PROJECT PLAN
 - [x] **5A.6a** Frontend: Fix PartyKit message accumulation and deduplication with API messages.
 - [x] **5A.6b** Frontend: Use current user's Clerk identity for PartyKit connections (not first participant).
 - [x] **5A.10** Backend: Extend PartyKit server for settings broadcasting (real-time AI mode synchronization).
+- [x] **5A.11** Backend: Extend PartyKit server for member event broadcasting (join/remove notifications).
 - [ ] **5A.7** Frontend: Show real-time presence (online users) using PartyKit connection state.
 - [ ] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
 - [ ] **5A.9** E2E: Test real-time chat between two users in the same room using Playwright MCP.
 
-[note] Clerk authentication is now enforced for all PartyKit connections and messages. Frontend sends the Clerk session token with every connection and message.
-[note] PartyKit server now supports multiple message types: chat messages, AI responses, and settings updates with secure endpoint authentication.
+
 
 ---
 
@@ -254,6 +256,128 @@ PROJECT PLAN
 
 // Each task above is designed to deliver a testable, end-to-end user flow.
 
-[note] Next.js 15 dynamic API route param handling (`params` as Promise) was updated and tested in all relevant API routes.
-
 [completed] AI Assistant Integration (Section 6 & 6A) - Fully implemented with auto-respond and summoned modes, real-time messaging, secure backend broadcasting, real-time settings synchronization, share link functionality, and all bug fixes applied. Ready for production use with complete multi-user collaboration support.
+
+---
+
+### 7. Database Schema Improvements ✅ COMPLETE
+
+- [x] **7.1** **User Schema Refactor**: Improved user data structure for better UX
+  - Removed `displayName` field from users table
+  - Added separate `firstName` and `lastName` fields
+  - Created and applied database migration (0008_flaky_lockheed.sql)
+  - Updated all API endpoints to use firstName/lastName instead of displayName
+  - Modified sync-user, chatroom routes, messages routes, AI routes, settings routes, and members routes
+  - Updated frontend to construct display names from firstName + lastName
+  - Fixed avatar initials generation to use proper first/last name logic (shows both initials)
+
+---
+
+### 8. Admin Management Features ✅ COMPLETE
+
+- [x] **8.1** **Admin Message Management**: Complete message moderation capabilities
+  - Created DELETE endpoint at `/api/chatrooms/[id]/messages` with admin-only authorization
+  - Added UI button in "Admin Actions" section (only visible to admins)
+  - Implemented confirmation dialog with warning about irreversible action
+  - Added proper error handling and loading states
+  - Real-time message clearing across all connected users
+
+- [x] **8.2** **Admin Member Management**: Comprehensive participant control
+  - Created DELETE endpoint at `/api/chatrooms/[id]/members` with admin authorization
+  - Added business rules: can't remove last admin, can't remove self
+  - Added small red remove buttons next to each participant (admin-only)
+  - Implemented confirmation dialog for member removal
+  - Added proper error handling and auto-refresh of participant list
+  - Real-time member removal updates across all users
+
+---
+
+### 9. Real-Time Member Notifications ✅ COMPLETE
+
+- [x] **9.1** **Member Event Broadcasting**: Live notifications for member changes
+  - Added broadcasting to PartyKit when members join (via invite link) or are removed
+  - Created `/member-event` endpoint in PartyKit server with proper authentication
+  - Member events broadcasted from backend APIs to PartyKit for real-time updates
+  - Request validation and security checks for member event broadcasting
+
+- [x] **9.2** **Frontend Member Notifications**: Real-time UI notifications
+  - Updated usePartySocket hook to handle member events
+  - Added member notification state and UI with color-coded notifications
+  - Green notifications for member joins, orange for member removals
+  - Notifications auto-dismiss after 4 seconds but can be manually closed
+  - Shows member name and action type in notification message
+
+---
+
+### 10. UI/UX Refinements ✅ COMPLETE
+
+- [x] **10.1** **Chatroom Interface Cleanup**: Simplified and focused UI
+  - Removed file and image upload buttons (Paperclip and Image icons)
+  - Removed AI auto-respond indicator from the top navigation
+  - Removed online status indicators (green dots) from user avatars
+  - Removed time duration and participant count from header navigation
+  - Updated share button text from "Share Link" to "Share Invite Link"
+  - Simplified placeholder text in message input to just "Type your message"
+
+- [x] **10.2** **Message Input Improvements**: Better chat experience
+  - Changed from single-line Input to multiline Textarea component
+  - Added support for Shift+Enter for new lines
+  - Implemented proper styling and auto-expansion
+  - Improved keyboard navigation and submit behavior
+
+- [x] **10.3** **Avatar Display Enhancements**: Better user identification
+  - Updated avatar initials to show both first and last name initials
+  - Consistent avatar display across all UI components
+  - Proper fallback handling for users without complete name data
+
+---
+
+### 11. File & Image Uploads
+
+- [ ] **11.1** Backend: API and storage for file/image uploads (PDF, DOCX, PNG, JPG, etc.).
+- [ ] **11.2** Frontend: UI for uploading files/images, show inline in chat.
+- [ ] **11.3** AI: Enable AI to process and answer questions about uploaded files/images.
+- [ ] **11.4** E2E test: User uploads a file/image, sees it in chat, and AI can reference it.
+
+---
+
+### 12. Tools & API Actions
+
+- [ ] **12.1** Integrate web search and third-party API actions for AI.
+- [ ] **12.2** Admin UI: Toggle which tools/APIs are enabled per room.
+- [ ] **12.3** E2E test: User requests a web search, AI responds with cited sources.
+
+---
+
+### 13. User Experience & Collaboration
+
+- [ ] **13.1** Emoji reactions, mark messages as important.
+- [ ] **13.2** Export conversation/files (download session).
+- [ ] **13.3** In-app/email notifications for mentions, responses, important events.
+- [ ] **13.4** E2E test: User reacts to a message, marks as important, exports chat.
+
+---
+
+### 14. Security & Advanced Admin
+
+- [ ] **14.1** Role-based permissions (admin, guest, etc.).
+- [ ] **14.2** Room privacy: public/private, secure invites.
+- [ ] **14.3** Admin logs: uploads, joins/leaves, etc.
+- [ ] **14.4** E2E test: Admin restricts access, reviews logs.
+
+---
+
+### 15. Polish & Out-of-Scope
+
+- [ ] **15.1** UI/UX polish, accessibility, mobile responsiveness.
+- [ ] **15.2** Review out-of-scope items for future planning.
+
+---
+
+### 16. E2E & Integration Testing
+
+- [ ] **16.1** Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
+- [ ] **16.2** E2E test: Two users can chat in real time in the same room.
+- [ ] **16.3** E2E test: User can create a room, join it, and see themselves listed.
+- [ ] **16.4** E2E test: Admin can delete messages and remove members.
+- [ ] **16.5** E2E test: Member notifications work in real-time across users.
