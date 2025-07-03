@@ -127,21 +127,23 @@ PROJECT PLAN
 
 - [x] **6.1** Integrate AI SDK in backend for chatroom assistant.
   - [x] AI API route for generating responses with conversation context
-  - [x] Settings API route for managing AI mode (reactive/summoned)
+  - [x] Settings API route for managing AI mode (auto-respond/summoned)
   - [x] Database schema updated to support AI messages and settings
   - [x] OpenAI provider installed and configured
 - [x] **6.2** Frontend: UI for AI messages, allow users to address AI.
   - [x] AI messages display with distinctive styling (purple gradient)
-  - [x] AI mode toggle in chatroom header (reactive vs summoned)
+  - [x] AI mode toggle in chatroom header (auto-respond vs summoned)
   - [x] @AI mention detection and triggering
   - [x] Dynamic message input placeholder based on AI mode
   - [x] AI status indicator showing current mode
+  - [x] Share link functionality for chatroom invitations
+  - [x] Fixed undefined function errors (hasAiMentions, renderInputOverlay)
 - [ ] **6.3** Threaded replies support (basic).
-- [ ] **6.4** E2E test: User can ask AI a question in a room and get a response.
+- [x] **6.4** E2E test: User can ask AI a question in a room and get a response.
 
-#### 6A. AI Assistant Features Implemented
+#### 6A. AI Assistant Features Implemented ✅ COMPLETE
 
-- [x] **6A.1** Reactive Mode: AI responds to every user message automatically
+- [x] **6A.1** Auto-respond Mode: AI responds to every user message automatically
 - [x] **6A.2** Summoned Mode: AI only responds when @AI is mentioned
 - [x] **6A.3** AI message persistence and real-time updates via PartyKit
 - [x] **6A.4** Conversation context awareness (last 10 messages)
@@ -158,17 +160,15 @@ PROJECT PLAN
   - Request validation and payload size limits
   - Chatroom ID verification to prevent cross-room message injection
   - Proper error handling and logging for security events
+- [x] **6A.9** **User Experience Enhancements**: Complete UX implementation
+  - Share link functionality for easy chatroom invitation (copy shareable URLs)
+  - Join functionality handles both chatroom IDs and full URLs with auto-extraction
+  - Auto-navigation to joined chatrooms for seamless user flow
+  - Internal naming consistency: "reactive" mode renamed to "auto-respond" throughout
+  - Database migration applied to update default AI mode to auto-respond
+  - Bug fixes: Resolved undefined function errors (hasAiMentions, renderInputOverlay)
+  - Clean input field implementation without complex badge overlays
 
-**Environment Variables Required:**
-- `OPENAI_API_KEY`: OpenAI API key for AI responses
-- `SHARED_PARTYKIT_BACKEND_API_KEY`: Shared secret for backend-to-PartyKit authentication
-
-**Setup Instructions:**
-1. Generate a secure API key: `bun -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` or `bun packages/common/generate-api-key.js`
-2. Add the generated key as `SHARED_PARTYKIT_BACKEND_API_KEY` in both webapp and realtime `.env.local` files
-3. Ensure the same key is used in both environments for authentication to work
-
----
 
 ### 7. File & Image Uploads
 
@@ -219,3 +219,5 @@ PROJECT PLAN
 // Each task above is designed to deliver a testable, end-to-end user flow.
 
 [note] Next.js 15 dynamic API route param handling (`params` as Promise) was updated and tested in all relevant API routes.
+
+[completed] AI Assistant Integration (Section 6 & 6A) - Fully implemented with auto-respond and summoned modes, real-time messaging, secure backend broadcasting, share link functionality, and all bug fixes applied. Ready for production use.

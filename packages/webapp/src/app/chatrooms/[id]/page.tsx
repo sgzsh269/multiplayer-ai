@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { usePartySocket, PartyMessage } from "@/lib/usePartySocket";
 import { useUser } from "@clerk/nextjs";
@@ -186,6 +187,27 @@ export default function ChatroomDetailPage({
     clerkUser?.username ||
     clerkUser?.emailAddresses?.[0]?.emailAddress ||
     "User";
+
+  // Function to render message content with highlighted @AI mentions
+  const renderMessageContent = (content: string) => {
+    // Split the content by @AI mentions
+    const parts = content.split(/(@AI\b)/gi);
+
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === "@ai") {
+        return (
+          <Badge
+            key={index}
+            variant="secondary"
+            className="inline-flex items-center bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200 mx-1"
+          >
+            @AI
+          </Badge>
+        );
+      }
+      return part;
+    });
+  };
 
   // Share link functionality
   const handleShareLink = async () => {
@@ -483,10 +505,9 @@ export default function ChatroomDetailPage({
                       }`}
                     >
                       <CardContent className="p-0 text-sm">
-                        <div
-                          className="m-0 p-3 leading-tight *:my-0"
-                          dangerouslySetInnerHTML={{ __html: message.content }}
-                        />
+                        <div className="m-0 p-3 leading-tight *:my-0">
+                          {renderMessageContent(message.content)}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
@@ -500,24 +521,26 @@ export default function ChatroomDetailPage({
           {/* Message Input */}
           <div className="border-t p-4 bg-white">
             <div className="flex items-center space-x-2">
-              <Input
-                placeholder={
-                  aiSettings.aiEnabled
-                    ? aiSettings.aiMode === "auto-respond"
-                      ? "Type your message - AI will auto-respond..."
-                      : "Type your message or @AI to get AI assistance..."
-                    : "Type your message to collaborate with your team..."
-                }
-                className="flex-1"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
+              <div className="flex-1 relative">
+                <Input
+                  placeholder={
+                    aiSettings.aiEnabled
+                      ? aiSettings.aiMode === "auto-respond"
+                        ? "Type your message - AI will auto-respond..."
+                        : "Type your message or @AI to get AI assistance..."
+                      : "Type your message to collaborate with your team..."
                   }
-                }}
-              />
+                  className="w-full"
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+              </div>
               <Button variant="ghost" size="icon">
                 <Paperclip className="w-5 h-5 text-gray-500" />
               </Button>
