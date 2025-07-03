@@ -17,6 +17,7 @@ import {
   Share2,
   Settings,
   Trash2,
+  UserMinus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,6 +46,7 @@ import {
   usePartySocket,
   PartyMessage,
   StreamingAiMessage,
+  MemberEventMessage,
 } from "@/lib/usePartySocket";
 import { useUser } from "@clerk/nextjs";
 
@@ -151,6 +153,15 @@ export default function ChatroomDetailPage({
     useState(false);
   const [tempSystemMessage, setTempSystemMessage] = useState("");
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [memberNotification, setMemberNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: "joined" | "removed";
+  }>({ show: false, message: "", type: "joined" });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -302,6 +313,32 @@ export default function ChatroomDetailPage({
     },
   });
 
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/members`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ memberId: parseInt(memberId) }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to remove member");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refetch chatroom data to update the participants list
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      setMemberToRemove(null);
+    },
+    onError: (error: any) => {
+      console.error("Failed to remove member:", error);
+      alert(`Failed to remove member: ${error.message}`);
+    },
+  });
+
   // Modal functions for AI system message editing
   const handleOpenSystemMessageModal = () => {
     setTempSystemMessage(aiSettings.aiSystemMessage || "");
@@ -413,6 +450,31 @@ export default function ChatroomDetailPage({
     [displayName]
   );
 
+  // Handle real-time member events
+  const handleMemberEvent = useCallback(
+    (event: MemberEventMessage) => {
+      const isJoined = event.type === "member-joined";
+      const message = isJoined
+        ? `${event.member.name} joined the chatroom`
+        : `${event.member.name} left the chatroom`;
+
+      setMemberNotification({
+        show: true,
+        message,
+        type: isJoined ? "joined" : "removed",
+      });
+
+      // Refresh the chatroom data to update the participants list
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+
+      // Hide notification after 4 seconds
+      setTimeout(() => {
+        setMemberNotification((prev) => ({ ...prev, show: false }));
+      }, 4000);
+    },
+    [queryClient, chatroomId]
+  );
+
   // Add PartyKit real-time messaging
   const {
     messages: partyMessages,
@@ -423,6 +485,7 @@ export default function ChatroomDetailPage({
     chatroomId: chatroomId || "",
     user: displayName,
     onSettingsUpdate: handleSettingsUpdate,
+    onMemberEvent: handleMemberEvent,
   });
 
   // Clear PartyKit messages when chatroom data changes (to prevent accumulation)
@@ -612,6 +675,48 @@ export default function ChatroomDetailPage({
         </div>
       )}
 
+      {/* Member Event Notification */}
+      {memberNotification.show && (
+        <div
+          className={`border-b p-3 flex items-center justify-between ${
+            memberNotification.type === "joined"
+              ? "bg-green-50 border-green-200"
+              : "bg-orange-50 border-orange-200"
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {memberNotification.type === "joined" ? (
+              <Users className="w-4 h-4 text-green-600" />
+            ) : (
+              <UserMinus className="w-4 h-4 text-orange-600" />
+            )}
+            <span
+              className={`text-sm ${
+                memberNotification.type === "joined"
+                  ? "text-green-800"
+                  : "text-orange-800"
+              }`}
+            >
+              {memberNotification.message}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setMemberNotification((prev) => ({ ...prev, show: false }))
+            }
+            className={
+              memberNotification.type === "joined"
+                ? "text-green-600 hover:text-green-800"
+                : "text-orange-600 hover:text-orange-800"
+            }
+          >
+            ×
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-4">
@@ -727,29 +832,24 @@ export default function ChatroomDetailPage({
 
           {/* Message Input */}
           <div className="border-t p-4 bg-white">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-end space-x-2">
               <div className="flex-1 relative">
-                <Input
-                  placeholder={
-                    aiSettings.aiEnabled
-                      ? aiSettings.aiMode === "auto-respond"
-                        ? "Type your message - AI will auto-respond..."
-                        : "Type your message or @AI to get AI assistance..."
-                      : "Type your message to collaborate with your team..."
-                  }
-                  className="w-full"
+                <Textarea
+                  placeholder="Type your message"
+                  className="w-full min-h-[44px] max-h-[120px] resize-none"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendMessage();
                     }
                   }}
+                  rows={1}
                 />
               </div>
               <Button
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 flex-shrink-0"
                 onClick={handleSendMessage}
               >
                 <Send className="w-5 h-5" />
@@ -790,9 +890,27 @@ export default function ChatroomDetailPage({
                     </p>
                     <p className="text-xs text-gray-500">{participant.role}</p>
                   </div>
-                  {participant.isTyping && (
-                    <span className="text-xs text-blue-500">Typing...</span>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {participant.isTyping && (
+                      <span className="text-xs text-blue-500">Typing...</span>
+                    )}
+                    {isCurrentUserAdmin && participant.name !== displayName && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setMemberToRemove({
+                            id: participant.id,
+                            name: participant.name,
+                          })
+                        }
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                        disabled={removeMemberMutation.isPending}
+                      >
+                        <UserMinus className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1003,6 +1121,52 @@ export default function ChatroomDetailPage({
               {deleteAllMessagesMutation.isPending
                 ? "Deleting..."
                 : "Delete All Messages"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog
+        open={!!memberToRemove}
+        onOpenChange={() => setMemberToRemove(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Remove Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove{" "}
+              <strong>{memberToRemove?.name}</strong> from this chatroom? They
+              will lose access to all messages and won't be able to participate
+              unless invited again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <UserMinus className="w-5 h-5 text-red-600 mr-2" />
+                <span className="text-sm font-medium text-red-800">
+                  This action cannot be undone
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setMemberToRemove(null)}
+              disabled={removeMemberMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                memberToRemove && removeMemberMutation.mutate(memberToRemove.id)
+              }
+              disabled={removeMemberMutation.isPending}
+            >
+              {removeMemberMutation.isPending ? "Removing..." : "Remove Member"}
             </Button>
           </DialogFooter>
         </DialogContent>

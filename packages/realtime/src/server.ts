@@ -211,6 +211,65 @@ export default class Server implements Party.Server {
       }
     }
 
+    // Handle member event broadcasts from backend
+    if (req.method === "POST" && req.url.includes("/member-event")) {
+      try {
+        // Verify API key authentication
+        const authHeader = req.headers.get("authorization");
+        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+
+        if (!expectedApiKey) {
+          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          return new Response("Server configuration error", { status: 500 });
+        }
+
+        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
+          console.warn("Unauthorized member event broadcast attempt");
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const body = (await req.json()) as {
+          type: "member-joined" | "member-removed";
+          chatroomId: string;
+          member: {
+            id: number;
+            name: string;
+            role: string;
+          };
+          timestamp?: number;
+        };
+
+        // Additional validation
+        if (!body.type || !body.chatroomId || !body.member) {
+          return new Response("Invalid request payload", { status: 400 });
+        }
+
+        // Ensure the chatroomId matches the room
+        if (body.chatroomId !== this.room.id) {
+          console.warn(
+            `Chatroom ID mismatch: ${body.chatroomId} vs ${this.room.id}`
+          );
+          return new Response("Chatroom ID mismatch", { status: 400 });
+        }
+
+        // Broadcast member event to all connected clients
+        this.room.broadcast(
+          JSON.stringify({
+            type: body.type,
+            member: body.member,
+            timestamp: body.timestamp || Date.now(),
+            chatroomId: body.chatroomId,
+            receivedAt: Date.now(),
+          })
+        );
+
+        return new Response("Member event broadcasted", { status: 200 });
+      } catch (e) {
+        console.error("Error broadcasting member event:", e);
+        return new Response("Error broadcasting member event", { status: 500 });
+      }
+    }
+
     return new Response("Not found", { status: 404 });
   }
 

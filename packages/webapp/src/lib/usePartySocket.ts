@@ -37,14 +37,27 @@ export interface SettingsUpdateMessage {
   receivedAt: number;
 }
 
+export interface MemberEventMessage {
+  type: "member-joined" | "member-removed";
+  member: {
+    id: number;
+    name: string;
+    role: string;
+  };
+  timestamp: number;
+  chatroomId: string;
+}
+
 export function usePartySocket({
   chatroomId,
   user,
   onSettingsUpdate,
+  onMemberEvent,
 }: {
   chatroomId: string;
   user: string;
   onSettingsUpdate?: (update: SettingsUpdateMessage) => void;
+  onMemberEvent?: (event: MemberEventMessage) => void;
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const [streamingAiMessage, setStreamingAiMessage] =
@@ -72,6 +85,15 @@ export function usePartySocket({
           // Handle settings updates
           if (data.type === "settings-update" && onSettingsUpdate) {
             onSettingsUpdate(data as SettingsUpdateMessage);
+            return;
+          }
+
+          // Handle member events
+          if (
+            (data.type === "member-joined" || data.type === "member-removed") &&
+            onMemberEvent
+          ) {
+            onMemberEvent(data as MemberEventMessage);
             return;
           }
 
@@ -120,7 +142,15 @@ export function usePartySocket({
       isMounted = false;
       if (conn) conn.close();
     };
-  }, [chatroomId, user, isLoaded, isSignedIn, getToken, onSettingsUpdate]);
+  }, [
+    chatroomId,
+    user,
+    isLoaded,
+    isSignedIn,
+    getToken,
+    onSettingsUpdate,
+    onMemberEvent,
+  ]);
 
   const sendMessage = async (text: string) => {
     if (!connRef.current) return;
