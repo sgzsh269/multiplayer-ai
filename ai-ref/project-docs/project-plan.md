@@ -178,6 +178,34 @@ PROJECT PLAN
   - Prevents settings conflicts and keeps all participants in sync with current AI configuration
   - Framework extensible for future chatroom settings (privacy, permissions, tools, etc.)
 
+- [x] **6A.11** **Real-Time AI Streaming**: Token-by-token streaming for all users ✅ COMPLETE
+  - **Backend Streaming**: AI responses stream token-by-token using AI SDK `streamText`
+    - Server-Sent Events (SSE) implementation for real-time token delivery
+    - Each token broadcasted to PartyKit for multi-user streaming
+    - Unique stream IDs prevent conflicts between concurrent streams
+    - Complete response saved to database only after streaming finishes
+  - **PartyKit Real-Time Broadcasting**: New `/ai-stream` endpoint for streaming events
+    - Handles `start`, `token`, and `complete` streaming events
+    - Secure API key authentication and request validation
+    - Broadcasts streaming tokens to all connected chatroom participants
+    - Graceful error handling for network failures
+  - **Frontend Multi-User Streaming**: Sophisticated client-side streaming management
+    - Local streaming for message initiator (direct SSE connection)
+    - Remote streaming for other users (via PartyKit broadcasts)
+    - Prevents duplicate streams for the same user
+    - Visual "AI typing..." indicators with pulse animation
+    - Auto-scroll follows streaming content for all participants
+  - **Enhanced User Experience**: Premium chat experience with real-time AI
+    - All users see AI responses appearing progressively in real-time
+    - Immediate feedback with typing indicators during AI processing
+    - Smooth auto-scroll keeps conversation in view
+    - Seamless integration with existing message history
+    - Fallback to non-streaming mode if PartyKit fails
+  - **Model Upgrade**: Switched from GPT-3.5-turbo to GPT-4o-mini for better performance
+    - Improved response quality and reasoning capabilities
+    - Better cost-performance ratio
+    - Enhanced context understanding for collaborative discussions
+
 ### 7. File & Image Uploads
 
 - [ ] **7.1** Backend: API and storage for file/image uploads (PDF, DOCX, PNG, JPG, etc.).
