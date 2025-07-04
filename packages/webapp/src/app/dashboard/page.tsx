@@ -63,8 +63,8 @@ interface Chatroom {
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false);
-  const [isJoinSessionOpen, setIsJoinSessionOpen] = useState(false);
+  const [isCreateChatroomOpen, setIsCreateChatroomOpen] = useState(false);
+  const [isJoinChatroomOpen, setIsJoinChatroomOpen] = useState(false);
   const { signOut } = useClerk();
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -89,7 +89,7 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: (data) => {
-      setIsCreateSessionOpen(false);
+      setIsCreateChatroomOpen(false);
       setNewChatroomName("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
       // Navigate to the newly created chatroom
@@ -201,7 +201,7 @@ export default function Dashboard() {
       throw new Error("Invalid input format");
     },
     onSuccess: (data, variables) => {
-      setIsJoinSessionOpen(false);
+      setIsJoinChatroomOpen(false);
       setJoinId("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
 
@@ -286,7 +286,7 @@ export default function Dashboard() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search sessions, files, or team members..."
+                placeholder="Search chatrooms, files, or team members..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 w-80"
@@ -360,30 +360,30 @@ export default function Dashboard() {
             {/* Quick Actions */}
             <div className="space-y-3">
               <Dialog
-                open={isCreateSessionOpen}
-                onOpenChange={setIsCreateSessionOpen}
+                open={isCreateChatroomOpen}
+                onOpenChange={setIsCreateChatroomOpen}
               >
                 <DialogTrigger asChild>
                   <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                     <Plus className="w-4 h-4 mr-2" />
-                    New Session
+                    New Chatroom
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create New Collaborative Session</DialogTitle>
+                    <DialogTitle>Create New Collaborative Chatroom</DialogTitle>
                     <DialogDescription>
-                      Start a new AI-powered collaborative session with your
+                      Start a new AI-powered collaborative chatroom with your
                       team.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Session Title
+                        Chatroom Title
                       </label>
                       <Input
-                        placeholder="Enter session title..."
+                        placeholder="Enter chatroom title..."
                         value={newChatroomName}
                         onChange={(e) => setNewChatroomName(e.target.value)}
                       />
@@ -392,7 +392,7 @@ export default function Dashboard() {
                       <label className="text-sm font-medium">
                         Description (Optional)
                       </label>
-                      <Input placeholder="Brief description of the session..." />
+                      <Input placeholder="Brief description of the chatroom..." />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
@@ -404,7 +404,7 @@ export default function Dashboard() {
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
-                      onClick={() => setIsCreateSessionOpen(false)}
+                      onClick={() => setIsCreateChatroomOpen(false)}
                     >
                       Cancel
                     </Button>
@@ -412,7 +412,7 @@ export default function Dashboard() {
                       className="bg-gradient-to-r from-purple-600 to-pink-600"
                       onClick={() => createChatroom.mutate(newChatroomName)}
                     >
-                      Create Session
+                      Create Chatroom
                     </Button>
                   </div>
                   {createError && (
@@ -422,21 +422,21 @@ export default function Dashboard() {
               </Dialog>
 
               <Dialog
-                open={isJoinSessionOpen}
-                onOpenChange={setIsJoinSessionOpen}
+                open={isJoinChatroomOpen}
+                onOpenChange={setIsJoinChatroomOpen}
               >
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full bg-transparent">
                     <Users className="w-4 h-4 mr-2" />
-                    Join Session
+                    Join Chatroom
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Join Collaborative Session</DialogTitle>
+                    <DialogTitle>Join Collaborative Chatroom</DialogTitle>
                     <DialogDescription>
-                      Enter a session ID or invitation link to join an existing
-                      session.
+                      Enter a chatroom ID or invitation link to join an existing
+                      chatroom.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -454,7 +454,7 @@ export default function Dashboard() {
                   <div className="flex justify-end space-x-2">
                     <Button
                       variant="outline"
-                      onClick={() => setIsJoinSessionOpen(false)}
+                      onClick={() => setIsJoinChatroomOpen(false)}
                     >
                       Cancel
                     </Button>
@@ -462,7 +462,7 @@ export default function Dashboard() {
                       className="bg-gradient-to-r from-purple-600 to-pink-600"
                       onClick={() => joinChatroom.mutate(joinId)}
                     >
-                      Join Session
+                      Join Chatroom
                     </Button>
                   </div>
                   {joinError && (
@@ -480,16 +480,16 @@ export default function Dashboard() {
         <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="grid gap-4">
-              {data.map((session: Chatroom) => (
+              {data.map((chatroom: Chatroom) => (
                 <Card
-                  key={session.id}
+                  key={chatroom.id}
                   className="hover:shadow-md transition-shadow"
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <CardTitle className="text-lg">
-                          {session.name}
+                          {chatroom.name}
                         </CardTitle>
                       </div>
                       <DropdownMenu>
@@ -501,7 +501,7 @@ export default function Dashboard() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>
                             <ExternalLink className="mr-2 h-4 w-4" />
-                            Open Session
+                            Open Chatroom
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Copy className="mr-2 h-4 w-4" />
@@ -518,11 +518,11 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />
-                          {session.participantCount || 0} participants
+                          {chatroom.participantCount || 0} participants
                         </span>
                         <span className="flex items-center">
                           <MessageSquare className="w-4 h-4 mr-1" />
-                          {session.messageCount || 0} messages
+                          {chatroom.messageCount || 0} messages
                         </span>
                       </div>
                     </CardDescription>
@@ -535,9 +535,9 @@ export default function Dashboard() {
                       <Button
                         size="sm"
                         className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        onClick={() => router.push(`/chatrooms/${session.id}`)}
+                        onClick={() => router.push(`/chatrooms/${chatroom.id}`)}
                       >
-                        {"Open Session"}
+                        {"Open Chatroom"}
                       </Button>
                     </div>
                   </CardContent>
