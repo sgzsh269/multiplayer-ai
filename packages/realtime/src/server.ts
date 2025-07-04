@@ -7,6 +7,13 @@ export default class Server implements Party.Server {
   private readonly AI_RATE_LIMIT = 10; // Max 10 AI messages per minute per room
   private readonly AI_RATE_WINDOW = 60 * 1000; // 1 minute
 
+  // Track typing users with auto-cleanup
+  private typingUsers = new Map<
+    string,
+    { displayName: string; timeout: NodeJS.Timeout }
+  >();
+  private readonly TYPING_TIMEOUT = 6000; // 6 seconds before auto-clearing typing status
+
   constructor(readonly room: Party.Room) {}
 
   async onRequest(req: Party.Request) {
@@ -314,6 +321,25 @@ export default class Server implements Party.Server {
       const session = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY!,
       }); // TODO: move secret to env config
+
+      // Handle typing events
+      if (parsed.type === "typing-start" || parsed.type === "typing-stop") {
+        // Use display name from the message, with fallback to "User"
+        const displayName = parsed.displayName || "User";
+        this.handleTypingEvent(
+          parsed.type,
+          session.sub as string,
+          displayName,
+          sender
+        );
+        return;
+      }
+
+      // For regular messages, clear typing status if user was typing
+      if (parsed.type === "chat-message") {
+        this.clearTypingStatus(session.sub as string);
+      }
+
       // Log the message and user
       console.log(
         `connection ${sender.id} (user ${session.sub}) sent message:`,
@@ -334,6 +360,69 @@ export default class Server implements Party.Server {
     } catch (e) {
       sender.send(JSON.stringify({ error: "Invalid Clerk token." }));
       return;
+    }
+  }
+
+  private handleTypingEvent(
+    type: "typing-start" | "typing-stop",
+    userId: string,
+    displayName: string,
+    sender: Party.Connection
+  ) {
+    if (type === "typing-start") {
+      // Clear any existing timeout for this user
+      const existing = this.typingUsers.get(userId);
+      if (existing) {
+        clearTimeout(existing.timeout);
+      }
+
+      // Set new typing status with auto-cleanup timeout
+      const timeout = setTimeout(() => {
+        this.clearTypingStatus(userId);
+      }, this.TYPING_TIMEOUT);
+
+      this.typingUsers.set(userId, { displayName, timeout });
+
+      // Broadcast typing start to all other clients
+      this.room.broadcast(
+        JSON.stringify({
+          type: "typing-start",
+          userId: userId,
+          displayName: displayName,
+          timestamp: Date.now(),
+          roomId: this.room.id,
+        }),
+        [sender.id] // Exclude the sender
+      );
+    } else if (type === "typing-stop") {
+      this.clearTypingStatus(userId);
+    }
+  }
+
+  private clearTypingStatus(userId: string) {
+    const existing = this.typingUsers.get(userId);
+    if (existing) {
+      clearTimeout(existing.timeout);
+      this.typingUsers.delete(userId);
+
+      // Broadcast typing stop to all clients
+      this.room.broadcast(
+        JSON.stringify({
+          type: "typing-stop",
+          userId: userId,
+          displayName: existing.displayName,
+          timestamp: Date.now(),
+          roomId: this.room.id,
+        })
+      );
+    }
+  }
+
+  async onClose(connection: Party.Connection) {
+    // Clean up typing status when user disconnects
+    const clerkUser = (connection as any).clerkUser;
+    if (clerkUser) {
+      this.clearTypingStatus(clerkUser.sub as string);
     }
   }
 }

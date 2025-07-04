@@ -47,6 +47,7 @@ import {
   PartyMessage,
   StreamingAiMessage,
   MemberEventMessage,
+  TypingEventMessage,
 } from "@/lib/usePartySocket";
 import { useUser } from "@clerk/nextjs";
 
@@ -162,6 +163,14 @@ export default function ChatroomDetailPage({
     message: string;
     type: "joined" | "removed";
   }>({ show: false, message: "", type: "joined" });
+
+  // Typing state management
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(
+    new Map()
+  );
+  const [isCurrentlyTyping, setIsCurrentlyTyping] = useState(false);
+  const lastKeystrokeRef = useRef<number>(0);
+  const typingCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -475,17 +484,41 @@ export default function ChatroomDetailPage({
     [queryClient, chatroomId]
   );
 
+  // Handle real-time typing events
+  const handleTypingEvent = useCallback(
+    (event: TypingEventMessage) => {
+      // Filter out our own typing events
+      if (event.userId === clerkUser?.id) {
+        return;
+      }
+
+      setTypingUsers((prev) => {
+        const newMap = new Map(prev);
+        if (event.type === "typing-start") {
+          newMap.set(event.userId, event.displayName);
+        } else {
+          newMap.delete(event.userId);
+        }
+        return newMap;
+      });
+    },
+    [clerkUser?.id]
+  );
+
   // Add PartyKit real-time messaging
   const {
     messages: partyMessages,
     sendMessage: sendPartyMessage,
     clearMessages,
     streamingAiMessage: partyStreamingAiMessage,
+    sendTypingStart,
+    sendTypingStop,
   } = usePartySocket({
     chatroomId: chatroomId || "",
     user: displayName,
     onSettingsUpdate: handleSettingsUpdate,
     onMemberEvent: handleMemberEvent,
+    onTypingEvent: handleTypingEvent,
   });
 
   // Clear PartyKit messages when chatroom data changes (to prevent accumulation)
@@ -603,11 +636,80 @@ export default function ChatroomDetailPage({
     partyStreamingAiMessage?.content,
   ]);
 
+  // Typing status checker - runs every 2 seconds to check if user is still typing
+  useEffect(() => {
+    if (isCurrentlyTyping) {
+      typingCheckIntervalRef.current = setInterval(() => {
+        const timeSinceLastKeystroke = Date.now() - lastKeystrokeRef.current;
+
+        // If no keystroke in the last 2 seconds, stop typing
+        if (timeSinceLastKeystroke > 2000) {
+          setIsCurrentlyTyping(false);
+          sendTypingStop();
+        } else {
+          // Send heartbeat to keep typing indicator alive
+          sendTypingStart();
+        }
+      }, 2000);
+    } else {
+      // Clear interval when not typing
+      if (typingCheckIntervalRef.current) {
+        clearInterval(typingCheckIntervalRef.current);
+        typingCheckIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (typingCheckIntervalRef.current) {
+        clearInterval(typingCheckIntervalRef.current);
+        typingCheckIntervalRef.current = null;
+      }
+    };
+  }, [isCurrentlyTyping, sendTypingStart, sendTypingStop]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (typingCheckIntervalRef.current) {
+        clearInterval(typingCheckIntervalRef.current);
+      }
+      if (isCurrentlyTyping) {
+        sendTypingStop();
+      }
+    };
+  }, [isCurrentlyTyping, sendTypingStop]);
+
+  // Handle input changes - simplified approach
+  const handleInputChange = (value: string) => {
+    setMessageInput(value);
+    lastKeystrokeRef.current = Date.now();
+
+    if (value.length > 0) {
+      // Start typing if not already typing
+      if (!isCurrentlyTyping) {
+        setIsCurrentlyTyping(true);
+        sendTypingStart();
+      }
+    } else {
+      // Stop typing immediately if input is cleared
+      if (isCurrentlyTyping) {
+        setIsCurrentlyTyping(false);
+        sendTypingStop();
+      }
+    }
+  };
+
   // Helper function to handle sending messages
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       setShouldAutoScroll(true); // Mark for auto-scroll
       const content = messageInput.trim();
+
+      // Stop typing when sending message
+      if (isCurrentlyTyping) {
+        setIsCurrentlyTyping(false);
+        sendTypingStop();
+      }
 
       // Send the user message
       sendMessageMutation.mutate(content);
@@ -826,6 +928,7 @@ export default function ChatroomDetailPage({
                 </div>
               );
             })}
+
             {/* Invisible element to scroll to */}
             <div ref={messagesEndRef} />
           </div>
@@ -838,7 +941,7 @@ export default function ChatroomDetailPage({
                   placeholder="Type your message"
                   className="w-full min-h-[44px] max-h-[120px] resize-none"
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -855,8 +958,30 @@ export default function ChatroomDetailPage({
                 <Send className="w-5 h-5" />
               </Button>
             </div>
-            <div className="flex justify-center items-center text-xs text-gray-500 mt-2 px-1">
-              <span>Press Enter to send, Shift+Enter for new line</span>
+            {/* Fixed height typing indicator area to prevent jitter */}
+            <div className="h-6 flex items-center space-x-2 mt-2 px-1">
+              {typingUsers.size > 0 ? (
+                <>
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce typing-dot-1"></div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce typing-dot-2"></div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce typing-dot-3"></div>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {Array.from(typingUsers.values()).length === 1
+                      ? `${Array.from(typingUsers.values())[0]} is typing...`
+                      : Array.from(typingUsers.values()).length === 2
+                      ? `${Array.from(typingUsers.values()).join(
+                          " and "
+                        )} are typing...`
+                      : `${Array.from(typingUsers.values())
+                          .slice(0, -1)
+                          .join(", ")} and ${Array.from(
+                          typingUsers.values()
+                        ).slice(-1)} are typing...`}
+                  </p>
+                </>
+              ) : null}
             </div>
           </div>
         </main>
@@ -872,47 +997,62 @@ export default function ChatroomDetailPage({
               <Users className="w-5 h-5 text-gray-500" />
             </div>
             <div className="space-y-3">
-              {chatroom.participants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="relative">
-                    <Avatar>
-                      <AvatarFallback>
-                        {participant.avatarInitials}
-                      </AvatarFallback>
-                    </Avatar>
+              {chatroom.participants.map((participant) => {
+                const isTyping = typingUsers.has(participant.id);
+                return (
+                  <div
+                    key={participant.id}
+                    className="flex items-center space-x-3"
+                  >
+                    <div className="relative">
+                      <Avatar>
+                        <AvatarFallback>
+                          {participant.avatarInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {participant.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {participant.role}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {isTyping && (
+                        <div className="flex items-center space-x-1">
+                          <div className="flex space-x-1">
+                            <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce typing-dot-1"></div>
+                            <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce typing-dot-2"></div>
+                            <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce typing-dot-3"></div>
+                          </div>
+                          <span className="text-xs text-blue-500">
+                            typing...
+                          </span>
+                        </div>
+                      )}
+                      {isCurrentUserAdmin &&
+                        participant.name !== displayName && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setMemberToRemove({
+                                id: participant.id,
+                                name: participant.name,
+                              })
+                            }
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
+                            disabled={removeMemberMutation.isPending}
+                          >
+                            <UserMinus className="w-3 h-3" />
+                          </Button>
+                        )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {participant.name}
-                    </p>
-                    <p className="text-xs text-gray-500">{participant.role}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {participant.isTyping && (
-                      <span className="text-xs text-blue-500">Typing...</span>
-                    )}
-                    {isCurrentUserAdmin && participant.name !== displayName && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setMemberToRemove({
-                            id: participant.id,
-                            name: participant.name,
-                          })
-                        }
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-6 w-6"
-                        disabled={removeMemberMutation.isPending}
-                      >
-                        <UserMinus className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

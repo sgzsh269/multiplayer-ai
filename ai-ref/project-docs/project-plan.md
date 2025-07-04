@@ -103,7 +103,7 @@ PROJECT PLAN
 - [x] **5.4b** Frontend: Fix sender identity issues for real-time messages.
 - [x] **5.4c** Frontend: Implement smart auto-scroll (only for message sender, not recipients).
 - [x] **5.4d** Frontend: Improved message input with multiline textarea, Shift+Enter support, and better UX.
-- [ ] **5.5** Presence: Show who is typing.
+- [x] **5.5** Presence: Show who is typing.
 - [ ] **5.6** E2E test: Two users can chat in real time in the same room.
 - [ ] **5.7** Frontend: Implement UI for file and image attachments (paperclip, image buttons).
 
@@ -120,7 +120,7 @@ PROJECT PLAN
 - [x] **5A.10** Backend: Extend PartyKit server for settings broadcasting (real-time AI mode synchronization).
 - [x] **5A.11** Backend: Extend PartyKit server for member event broadcasting (join/remove notifications).
 - [ ] **5A.7** Frontend: Show real-time presence (online users) using PartyKit connection state.
-- [ ] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
+- [x] **5A.8** Frontend: Show 'user is typing' indicator using PartyKit events.
 - [ ] **5A.9** E2E: Test real-time chat between two users in the same room using Playwright MCP.
 
 

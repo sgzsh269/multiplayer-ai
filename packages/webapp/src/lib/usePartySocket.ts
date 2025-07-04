@@ -48,22 +48,36 @@ export interface MemberEventMessage {
   chatroomId: string;
 }
 
+export interface TypingEventMessage {
+  type: "typing-start" | "typing-stop";
+  userId: string;
+  displayName: string;
+  timestamp: number;
+  roomId: string;
+}
+
 export function usePartySocket({
   chatroomId,
   user,
   onSettingsUpdate,
   onMemberEvent,
+  onTypingEvent,
 }: {
   chatroomId: string;
   user: string;
   onSettingsUpdate?: (update: SettingsUpdateMessage) => void;
   onMemberEvent?: (event: MemberEventMessage) => void;
+  onTypingEvent?: (event: TypingEventMessage) => void;
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const [streamingAiMessage, setStreamingAiMessage] =
     useState<StreamingAiMessage | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const connRef = useRef<PartySocket | null>(null);
   const { getToken, isLoaded, isSignedIn } = useAuth();
+
+  // Track typing timeout for auto-cleanup
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!chatroomId || !user || !isLoaded || !isSignedIn) return;
@@ -94,6 +108,27 @@ export function usePartySocket({
             onMemberEvent
           ) {
             onMemberEvent(data as MemberEventMessage);
+            return;
+          }
+
+          // Handle typing events
+          if (data.type === "typing-start" || data.type === "typing-stop") {
+            if (onTypingEvent) {
+              onTypingEvent(data as TypingEventMessage);
+            }
+
+            // Update local typing state
+            if (isMounted) {
+              setTypingUsers((prev) => {
+                const newSet = new Set(prev);
+                if (data.type === "typing-start") {
+                  newSet.add(data.userId);
+                } else {
+                  newSet.delete(data.userId);
+                }
+                return newSet;
+              });
+            }
             return;
           }
 
@@ -141,6 +176,10 @@ export function usePartySocket({
     return () => {
       isMounted = false;
       if (conn) conn.close();
+      // Clear typing timeout on cleanup
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [
     chatroomId,
@@ -150,6 +189,7 @@ export function usePartySocket({
     getToken,
     onSettingsUpdate,
     onMemberEvent,
+    onTypingEvent,
   ]);
 
   const sendMessage = async (text: string) => {
@@ -167,9 +207,43 @@ export function usePartySocket({
     );
   };
 
+  const sendTypingStart = async () => {
+    if (!connRef.current) return;
+    const token = await getToken();
+    if (!token) return;
+    connRef.current.send(
+      JSON.stringify({
+        type: "typing-start",
+        token,
+        displayName: user, // Pass the display name from the frontend
+      })
+    );
+  };
+
+  const sendTypingStop = async () => {
+    if (!connRef.current) return;
+    const token = await getToken();
+    if (!token) return;
+    connRef.current.send(
+      JSON.stringify({
+        type: "typing-stop",
+        token,
+        displayName: user, // Pass the display name from the frontend
+      })
+    );
+  };
+
   const clearMessages = useCallback(() => {
     setMessages([]);
   }, []);
 
-  return { messages, sendMessage, clearMessages, streamingAiMessage };
+  return {
+    messages,
+    sendMessage,
+    clearMessages,
+    streamingAiMessage,
+    typingUsers,
+    sendTypingStart,
+    sendTypingStop,
+  };
 }

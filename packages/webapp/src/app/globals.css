@@ -1,4 +1,3 @@
-
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -129,5 +128,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom typing indicator animations */
+@layer components {
+  .typing-dot-1 {
+    animation-delay: 0s;
+  }
+
+  .typing-dot-2 {
+    animation-delay: 0.1s;
+  }
+
+  .typing-dot-3 {
+    animation-delay: 0.2s;
   }
 }
