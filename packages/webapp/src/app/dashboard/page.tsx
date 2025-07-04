@@ -106,75 +106,109 @@ export default function Dashboard() {
     mutationFn: async (input: string) => {
       setJoinError("");
 
-      // Extract chatroom ID from input (could be full URL or just ID)
-      let chatroomId = input.trim();
+      let joinUrl = input.trim();
 
-      // Check if input is a URL and extract ID from it
-      try {
-        if (chatroomId.startsWith("http")) {
-          const url = new URL(chatroomId);
-          // Update regex to match UUID format in URL path
-          const pathMatch = url.pathname.match(
+      // Check if input is a secure invite URL
+      if (joinUrl.startsWith("http")) {
+        try {
+          const url = new URL(joinUrl);
+
+          // Check if it's a secure invite link (/invite/code)
+          const inviteMatch = url.pathname.match(/\/invite\/([a-zA-Z0-9_-]+)/);
+          if (inviteMatch) {
+            const inviteCode = inviteMatch[1];
+            const res = await fetch(`/api/invite/${inviteCode}`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              setJoinError(err.error || "Failed to join via invite link");
+              throw new Error(err.error || "Failed to join via invite link");
+            }
+            const data = await res.json();
+            return { ...data, chatroomId: data.chatroomId };
+          }
+
+          // Legacy: Check if it's an old chatroom URL (/chatrooms/id)
+          const chatroomMatch = url.pathname.match(
             /\/chatrooms\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
           );
-          if (pathMatch) {
-            chatroomId = pathMatch[1];
-          } else {
-            throw new Error("Invalid chatroom URL format");
+          if (chatroomMatch) {
+            const chatroomId = chatroomMatch[1];
+            const res = await fetch(`/api/chatrooms/${chatroomId}/join`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              setJoinError(err.error || "Failed to join chatroom");
+              throw new Error(err.error || "Failed to join chatroom");
+            }
+            const data = await res.json();
+            return { ...data, chatroomId };
           }
+
+          setJoinError("Invalid invite or chatroom URL format");
+          throw new Error("Invalid URL format");
+        } catch (error: any) {
+          if (error.message !== "Invalid URL format") {
+            setJoinError("Invalid URL format");
+            throw new Error("Invalid URL format");
+          }
+          throw error;
         }
-        // If not a URL, assume it's already an ID
-      } catch (error) {
-        if (chatroomId.startsWith("http")) {
-          setJoinError("Invalid chatroom URL format");
-          throw new Error("Invalid chatroom URL format");
-        }
-        // If not a URL but parsing failed, continue with original input
       }
 
-      // Validate that we have a UUID format
+      // If not a URL, check if it's a direct invite code
+      if (
+        joinUrl.length >= 8 &&
+        joinUrl.length <= 20 &&
+        /^[a-zA-Z0-9_-]+$/.test(joinUrl)
+      ) {
+        try {
+          const res = await fetch(`/api/invite/${joinUrl}`, {
+            method: "POST",
+          });
+          if (!res.ok) {
+            // If invite fails, try as legacy chatroom ID
+            throw new Error("Not an invite code");
+          }
+          const data = await res.json();
+          return { ...data, chatroomId: data.chatroomId };
+        } catch (error) {
+          // Fall through to legacy chatroom ID handling
+        }
+      }
+
+      // Legacy: Try as direct chatroom UUID
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(chatroomId)) {
-        setJoinError("Please enter a valid chatroom ID or URL");
-        throw new Error("Invalid chatroom ID format");
+      if (uuidRegex.test(joinUrl)) {
+        const res = await fetch(`/api/chatrooms/${joinUrl}/join`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setJoinError(err.error || "Failed to join chatroom");
+          throw new Error(err.error || "Failed to join chatroom");
+        }
+        const data = await res.json();
+        return { ...data, chatroomId: joinUrl };
       }
 
-      const res = await fetch(`/api/chatrooms/${chatroomId}/join`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        setJoinError(err.error || "Failed to join chatroom");
-        throw new Error(err.error || "Failed to join chatroom");
-      }
-      return res.json();
+      setJoinError(
+        "Please enter a valid invite link, invite code, or chatroom ID"
+      );
+      throw new Error("Invalid input format");
     },
     onSuccess: (data, variables) => {
       setIsJoinSessionOpen(false);
       setJoinId("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
 
-      // Extract the chatroom ID and navigate to it
-      let chatroomId = variables.trim();
-      if (chatroomId.startsWith("http")) {
-        try {
-          const url = new URL(chatroomId);
-          // Update regex to match UUID format in URL path
-          const pathMatch = url.pathname.match(
-            /\/chatrooms\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
-          );
-          if (pathMatch) {
-            chatroomId = pathMatch[1];
-          }
-        } catch (error) {
-          // If extraction fails, don't navigate
-          return;
-        }
+      // Navigate to the joined chatroom using the chatroomId from response
+      if (data.chatroomId) {
+        router.push(`/chatrooms/${data.chatroomId}`);
       }
-
-      // Navigate to the joined chatroom
-      router.push(`/chatrooms/${chatroomId}`);
     },
   });
 
@@ -408,10 +442,10 @@ export default function Dashboard() {
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Session ID or Invitation Link
+                        Invitation Link or Code
                       </label>
                       <Input
-                        placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000 or invitation URL"
+                        placeholder="e.g., https://app.com/invite/abc123 or abc123"
                         value={joinId}
                         onChange={(e) => setJoinId(e.target.value)}
                       />

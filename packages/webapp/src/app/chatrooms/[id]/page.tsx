@@ -405,27 +405,49 @@ export default function ChatroomDetailPage({
 
   // Share link functionality
   const handleShareLink = async () => {
-    const shareUrl = `${window.location.origin}/chatrooms/${chatroomId}`;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      // Generate a secure invite link
+      const response = await fetch(`/api/chatrooms/${chatroomId}/invite`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to create invite link: ${error.error}`);
+        return;
+      }
+
+      const data = await response.json();
+      
+      await navigator.clipboard.writeText(data.inviteUrl);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000); // Reset after 2 seconds
     } catch (error) {
-      console.error("Failed to copy link:", error);
-      // Fallback: select and copy using document.execCommand
-      const textArea = document.createElement("textarea");
-      textArea.value = shareUrl;
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
+      console.error("Failed to create/copy invite link:", error);
+      // Fallback: try to create secure invite and copy manually
       try {
-        document.execCommand("copy");
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
+        const response = await fetch(`/api/chatrooms/${chatroomId}/invite`, {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const textArea = document.createElement("textarea");
+          textArea.value = data.inviteUrl;
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand("copy");
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+          document.body.removeChild(textArea);
+        } else {
+          alert('Failed to create secure invite link');
+        }
       } catch (fallbackError) {
-        console.error("Fallback copy failed:", fallbackError);
+        console.error("Fallback invite creation failed:", fallbackError);
+        alert('Failed to create invite link. Please try again.');
       }
-      document.body.removeChild(textArea);
     }
   };
 
@@ -554,7 +576,7 @@ export default function ChatroomDetailPage({
       timestamp: timestamp ? new Date(timestamp).toLocaleTimeString() : "",
       _source: "api",
       sender: msg.isAiMessage
-        ? { id: "ai-assistant", name: "AI Assistant", avatarUrl: null }
+        ? { id: "ai-assistant", name: "AI", avatarUrl: null }
         : msg.sender,
     });
   });
@@ -586,7 +608,7 @@ export default function ChatroomDetailPage({
   if (streamingAiMessage.isStreaming && streamingAiMessage.content) {
     allMessages.push({
       id: "streaming-ai-local",
-      sender: { id: "ai-assistant", name: "AI Assistant", avatarUrl: null },
+      sender: { id: "ai-assistant", name: "AI", avatarUrl: null },
       timestamp: new Date().toLocaleTimeString(),
       content: streamingAiMessage.content,
       isAiMessage: true,
@@ -603,7 +625,7 @@ export default function ChatroomDetailPage({
   ) {
     allMessages.push({
       id: "streaming-ai-remote",
-      sender: { id: "ai-assistant", name: "AI Assistant", avatarUrl: null },
+      sender: { id: "ai-assistant", name: "AI", avatarUrl: null },
       timestamp: new Date(
         partyStreamingAiMessage.timestamp
       ).toLocaleTimeString(),
@@ -892,11 +914,6 @@ export default function ChatroomDetailPage({
                       >
                         {senderName}
                       </span>
-                      {isAiMessage && (
-                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
-                          AI Assistant
-                        </span>
-                      )}
                       <span className="text-xs text-gray-500">
                         {message.timestamp}
                       </span>

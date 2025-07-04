@@ -7,6 +7,7 @@ import {
   unique,
   uniqueIndex,
   uuid,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -66,3 +67,15 @@ export const chatroom_members = pgTable(
     uniqueIndex("unique_user_chatroom").on(table.userId, table.chatroomId),
   ]
 );
+
+export const chatroom_invites = pgTable("chatroom_invites", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  chatroomId: uuid("chatroom_id").notNull(),
+  createdBy: uuid("created_by").notNull(), // User who created the invite
+  inviteCode: text("invite_code").notNull().unique(), // Short unique code for the invite URL
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(), // Can be deactivated manually
+  usedBy: jsonb("used_by").default([]).$type<string[]>(), // Array of user IDs who used this invite
+  maxUses: text("max_uses"), // Optional limit on how many times it can be used (null = unlimited)
+});

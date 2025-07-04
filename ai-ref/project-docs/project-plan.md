@@ -309,9 +309,60 @@ PROJECT PLAN
 
 ---
 
-### 10. UI/UX Refinements ✅ COMPLETE
+### 10. Secure Invite System ✅ COMPLETE
 
-- [x] **10.1** **Chatroom Interface Cleanup**: Simplified and focused UI
+- [x] **10.1** **Database Schema**: New table for secure invite links
+  - Created `chatroom_invites` table with UUID, expiry, usage tracking, and security features
+  - Added invite code generation with nanoid for URL-safe short codes
+  - Implemented usage tracking with JSON array to support multiple users per invite
+  - Added expiry timestamps, active status, and optional max usage limits
+  - Generated and applied database migration successfully
+
+- [x] **10.2** **Backend API - Invite Generation**: Secure invite link creation
+  - Created POST `/api/chatrooms/[id]/invite` endpoint for generating secure invites
+  - Added authentication and membership validation for invite creators
+  - Implemented 10-minute expiry time as requested
+  - Added proper error handling and validation
+  - Returns secure invite URL with expiry information
+
+- [x] **10.3** **Backend API - Invite Processing**: Join via secure invite links
+  - Created POST `/api/invite/[code]` endpoint for processing invite links
+  - Added comprehensive validation: expiry checks, active status, usage limits
+  - Implemented usage tracking with array of user IDs who used the invite
+  - Added real-time member join broadcasting to PartyKit
+  - Proper error messages for expired, deactivated, or overused invites
+
+- [x] **10.4** **Frontend - Invite Page**: Dedicated join experience
+  - Created `/invite/[code]` page with polished UI for joining chatrooms
+  - Added authentication redirect for non-signed-in users
+  - Implemented automatic processing and navigation to joined chatroom
+  - Added loading states, success messages, and error handling
+  - Shows appropriate messages for already-member scenarios
+
+- [x] **10.5** **Frontend - Share Integration**: Updated share functionality
+  - Modified chatroom share button to generate secure invite links instead of direct URLs
+  - Added proper error handling for invite generation failures
+  - Updated clipboard functionality to copy secure invite URLs
+  - Added fallback mechanisms for browsers with restricted clipboard access
+
+- [x] **10.6** **Frontend - Join Integration**: Enhanced join capabilities
+  - Updated dashboard join functionality to handle secure invite URLs and codes
+  - Added support for multiple input formats: invite URLs, direct codes, legacy chatroom IDs
+  - Improved placeholder text and error messages for better user guidance
+  - Maintained backward compatibility with existing chatroom ID join method
+
+- [x] **10.7** **Security Features**: Enterprise-grade invite security
+  - Short-lived invites (10 minutes) for reduced attack surface
+  - URL-safe random codes using nanoid (12 characters)
+  - Usage tracking prevents unauthorized access while allowing team invites
+  - Active status control allows manual invite deactivation
+  - Comprehensive input validation and error handling
+
+---
+
+### 11. UI/UX Refinements ✅ COMPLETE
+
+- [x] **11.1** **Chatroom Interface Cleanup**: Simplified and focused UI
   - Removed file and image upload buttons (Paperclip and Image icons)
   - Removed AI auto-respond indicator from the top navigation
   - Removed online status indicators (green dots) from user avatars
@@ -319,65 +370,66 @@ PROJECT PLAN
   - Updated share button text from "Share Link" to "Share Invite Link"
   - Simplified placeholder text in message input to just "Type your message"
 
-- [x] **10.2** **Message Input Improvements**: Better chat experience
+- [x] **11.2** **Message Input Improvements**: Better chat experience
   - Changed from single-line Input to multiline Textarea component
   - Added support for Shift+Enter for new lines
   - Implemented proper styling and auto-expansion
   - Improved keyboard navigation and submit behavior
 
-- [x] **10.3** **Avatar Display Enhancements**: Better user identification
+- [x] **11.3** **Avatar Display Enhancements**: Better user identification
   - Updated avatar initials to show both first and last name initials
   - Consistent avatar display across all UI components
   - Proper fallback handling for users without complete name data
 
 ---
 
-### 11. File & Image Uploads
+### 12. File & Image Uploads
 
-- [ ] **11.1** Backend: API and storage for file/image uploads (PDF, DOCX, PNG, JPG, etc.).
-- [ ] **11.2** Frontend: UI for uploading files/images, show inline in chat.
-- [ ] **11.3** AI: Enable AI to process and answer questions about uploaded files/images.
-- [ ] **11.4** E2E test: User uploads a file/image, sees it in chat, and AI can reference it.
-
----
-
-### 12. Tools & API Actions
-
-- [ ] **12.1** Integrate web search and third-party API actions for AI.
-- [ ] **12.2** Admin UI: Toggle which tools/APIs are enabled per room.
-- [ ] **12.3** E2E test: User requests a web search, AI responds with cited sources.
+- [ ] **12.1** Backend: API and storage for file/image uploads (PDF, DOCX, PNG, JPG, etc.).
+- [ ] **12.2** Frontend: UI for uploading files/images, show inline in chat.
+- [ ] **12.3** AI: Enable AI to process and answer questions about uploaded files/images.
+- [ ] **12.4** E2E test: User uploads a file/image, sees it in chat, and AI can reference it.
 
 ---
 
-### 13. User Experience & Collaboration
+### 13. Tools & API Actions
 
-- [ ] **13.1** Emoji reactions, mark messages as important.
-- [ ] **13.2** Export conversation/files (download session).
-- [ ] **13.3** In-app/email notifications for mentions, responses, important events.
-- [ ] **13.4** E2E test: User reacts to a message, marks as important, exports chat.
-
----
-
-### 14. Security & Advanced Admin
-
-- [ ] **14.1** Role-based permissions (admin, guest, etc.).
-- [ ] **14.2** Room privacy: public/private, secure invites.
-- [ ] **14.3** Admin logs: uploads, joins/leaves, etc.
-- [ ] **14.4** E2E test: Admin restricts access, reviews logs.
+- [ ] **13.1** Integrate web search and third-party API actions for AI.
+- [ ] **13.2** Admin UI: Toggle which tools/APIs are enabled per room.
+- [ ] **13.3** E2E test: User requests a web search, AI responds with cited sources.
 
 ---
 
-### 15. Polish & Out-of-Scope
+### 14. User Experience & Collaboration
 
-- [ ] **15.1** UI/UX polish, accessibility, mobile responsiveness.
-- [ ] **15.2** Review out-of-scope items for future planning.
+- [ ] **14.1** Emoji reactions, mark messages as important.
+- [ ] **14.2** Export conversation/files (download session).
+- [ ] **14.3** In-app/email notifications for mentions, responses, important events.
+- [ ] **14.4** E2E test: User reacts to a message, marks as important, exports chat.
 
 ---
 
-### 16. E2E & Integration Testing
+### 15. Security & Advanced Admin
 
-- [ ] **16.1** Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
-- [ ] **16.2** E2E test: Two users can chat in real time in the same room.
-- [ ] **16.3** E2E test: User can create a room, join it, and see themselves listed.
-- [ ] **16.4** E2E test: Admin can delete messages and remove members.
-- [ ] **16.5** E2E test: Member notifications work in real-time across users.
+- [ ] **15.1** Role-based permissions (admin, guest, etc.).
+- [x] **15.2** Room privacy: public/private, secure invites. *(Secure invites completed in Section 10)*
+- [ ] **15.3** Admin logs: uploads, joins/leaves, etc.
+- [ ] **15.4** E2E test: Admin restricts access, reviews logs.
+
+---
+
+### 16. Polish & Out-of-Scope
+
+- [ ] **16.1** UI/UX polish, accessibility, mobile responsiveness.
+- [ ] **16.2** Review out-of-scope items for future planning.
+
+---
+
+### 17. E2E & Integration Testing
+
+- [ ] **17.1** Playwright tests for dashboard flows: chatroom creation, joining, team listing, etc.
+- [ ] **17.2** E2E test: Two users can chat in real time in the same room.
+- [ ] **17.3** E2E test: User can create a room, join it, and see themselves listed.
+- [ ] **17.4** E2E test: Admin can delete messages and remove members.
+- [ ] **17.5** E2E test: Member notifications work in real-time across users.
+- [ ] **17.6** E2E test: Secure invite system with expiry and usage tracking.

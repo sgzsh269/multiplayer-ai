@@ -127,7 +127,7 @@ export async function GET(
       sender: msg.isAiMessage
         ? {
             id: "ai-assistant",
-            name: "AI Assistant",
+            name: "AI",
             avatarUrl: null,
           }
         : {
