@@ -49,6 +49,7 @@ import {
   Share2,
   Link,
   Trash2,
+  UserX,
 } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -82,6 +83,19 @@ interface Message {
   type: "user" | "ai";
 }
 
+interface StatusNotification {
+  id: string;
+  type:
+    | "member-joined"
+    | "member-removed"
+    | "settings-update"
+    | "messages-cleared";
+  content: string;
+  timestamp: string;
+  data?: any;
+  isVisible?: boolean;
+}
+
 export default function Dashboard() {
   const [isCreateChatroomOpen, setIsCreateChatroomOpen] = useState(false);
   const [isJoinChatroomOpen, setIsJoinChatroomOpen] = useState(false);
@@ -99,6 +113,10 @@ export default function Dashboard() {
   const [isClearMessagesOpen, setIsClearMessagesOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [removeMemberDialog, setRemoveMemberDialog] = useState<{
+    isOpen: boolean;
+    member: any | null;
+  }>({ isOpen: false, member: null });
   const { signOut } = useClerk();
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -191,6 +209,38 @@ export default function Dashboard() {
 
   // Add state for initial message history
   const [initialMessages, setInitialMessages] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<StatusNotification[]>([]);
+
+  // Helper function to add notifications
+  const addNotification = useCallback(
+    (
+      notification: Omit<StatusNotification, "id" | "timestamp" | "isVisible">
+    ) => {
+      const newNotification: StatusNotification = {
+        ...notification,
+        id: `notification-${Date.now()}-${Math.random()}`,
+        timestamp: new Date().toISOString(),
+        isVisible: true,
+      };
+      setNotifications((prev) => [...prev, newNotification]);
+
+      // Auto-dismiss after 4 seconds
+      setTimeout(() => {
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === newNotification.id ? { ...n, isVisible: false } : n
+          )
+        );
+        // Remove from array after animation completes
+        setTimeout(() => {
+          setNotifications((prev) =>
+            prev.filter((n) => n.id !== newNotification.id)
+          );
+        }, 300);
+      }, 4000);
+    },
+    []
+  );
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -339,21 +389,103 @@ export default function Dashboard() {
       queryClient.invalidateQueries({
         queryKey: ["participants", selectedChatroomId],
       });
+
+      // Add notification for member events
+      if (event.type === "member-joined") {
+        addNotification({
+          type: "member-joined",
+          content: `${event.member.name} joined the chatroom`,
+          data: event.member,
+        });
+      } else if (event.type === "member-removed") {
+        addNotification({
+          type: "member-removed",
+          content: `${event.member.name} was removed from the chatroom`,
+          data: event.member,
+        });
+      }
     },
-    [queryClient, selectedChatroomId]
+    [queryClient, selectedChatroomId, addNotification]
   );
+
   const onSettingsUpdate = useCallback(
     (update: SettingsUpdateMessage) => {
       refetchAiSettings();
+
+      // Add notification for settings changes
+      console.log("Settings update received:", update.settings);
+      console.log("Current aiSettings:", aiSettings);
+
+      // Compare with current settings to determine what actually changed
+      if (aiSettings && update.settings.aiMode !== aiSettings.aiMode) {
+        // AI Mode was changed
+        console.log(
+          "AI Mode changed:",
+          aiSettings.aiMode,
+          "->",
+          update.settings.aiMode
+        );
+        const aiModeText =
+          update.settings.aiMode === "auto-respond"
+            ? "Auto-respond"
+            : update.settings.aiMode === "summoned"
+            ? "Summoned (@AI only)"
+            : `Unknown mode: ${update.settings.aiMode}`;
+
+        addNotification({
+          type: "settings-update",
+          content: `${update.updatedBy.displayName} changed AI mode to ${aiModeText}`,
+          data: update.settings,
+        });
+      } else if (
+        aiSettings &&
+        update.settings.aiSystemMessage !== aiSettings.aiSystemMessage
+      ) {
+        // System message was changed
+        console.log(
+          "System message changed:",
+          aiSettings.aiSystemMessage,
+          "->",
+          update.settings.aiSystemMessage
+        );
+        addNotification({
+          type: "settings-update",
+          content: `${update.updatedBy.displayName} updated the AI system prompt`,
+          data: update.settings,
+        });
+      } else {
+        // Generic settings change (or first load when aiSettings is null)
+        console.log(
+          "Generic settings change. aiSettings:",
+          aiSettings,
+          "update:",
+          update.settings
+        );
+        addNotification({
+          type: "settings-update",
+          content: `${update.updatedBy.displayName} updated AI settings`,
+          data: update.settings,
+        });
+      }
     },
-    [refetchAiSettings]
+    [refetchAiSettings, addNotification, aiSettings]
   );
 
-  const onMessagesClear = useCallback((event: MessagesClearedEvent) => {
-    // Clear local message state when messages are cleared by admin
-    setInitialMessages([]);
-    setStreamingMessage(null);
-  }, []);
+  const onMessagesClear = useCallback(
+    (event: MessagesClearedEvent) => {
+      // Clear local message state when messages are cleared by admin
+      setInitialMessages([]);
+      setStreamingMessage(null);
+
+      // Add notification for messages cleared
+      addNotification({
+        type: "messages-cleared",
+        content: `${event.clearedBy.name} cleared all messages`,
+        data: event.clearedBy,
+      });
+    },
+    [addNotification]
+  );
   const {
     messages: partyMessages,
     sendMessage: sendPartyMessage,
@@ -378,6 +510,9 @@ export default function Dashboard() {
     fetch(`/api/chatrooms/${selectedChatroomId}/messages`)
       .then((res) => res.json())
       .then((data) => setInitialMessages(data.messages || []));
+
+    // Clear notifications when switching chatrooms
+    setNotifications([]);
   }, [selectedChatroomId]);
 
   // Merge initial messages with real-time PartyKit messages (avoid duplicates)
@@ -414,6 +549,7 @@ export default function Dashboard() {
         },
         isAiMessage: pm.isAiMessage || pm.userId === "ai-assistant",
       })),
+    // Notifications are now handled separately as toast notifications
   ];
 
   // Sort messages by timestamp to ensure proper order
@@ -645,6 +781,35 @@ export default function Dashboard() {
     },
   });
 
+  // Remove member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: async ({
+      chatroomId,
+      memberId,
+    }: {
+      chatroomId: string;
+      memberId: string;
+    }) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to remove member");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refresh participants list
+      queryClient.invalidateQueries({
+        queryKey: ["participants", selectedChatroomId],
+      });
+      setRemoveMemberDialog({ isOpen: false, member: null });
+    },
+  });
+
   const handleClearMessages = () => {
     if (!selectedChatroomId) return;
     clearMessagesMutation.mutate(selectedChatroomId);
@@ -683,6 +848,81 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-[100] space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`transform transition-all duration-300 ease-in-out ${
+              notification.isVisible
+                ? "translate-x-0 opacity-100"
+                : "translate-x-full opacity-0"
+            }`}
+          >
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <span className="text-lg">
+                    {notification.type === "member-joined" && "👋"}
+                    {notification.type === "member-removed" && "👋"}
+                    {notification.type === "settings-update" && "⚙️"}
+                    {notification.type === "messages-cleared" && "🧹"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {notification.type === "member-joined" && "Member Joined"}
+                    {notification.type === "member-removed" && "Member Removed"}
+                    {notification.type === "settings-update" &&
+                      "Settings Updated"}
+                    {notification.type === "messages-cleared" &&
+                      "Messages Cleared"}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {notification.content}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(notification.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setNotifications((prev) =>
+                      prev.map((n) =>
+                        n.id === notification.id
+                          ? { ...n, isVisible: false }
+                          : n
+                      )
+                    );
+                    setTimeout(() => {
+                      setNotifications((prev) =>
+                        prev.filter((n) => n.id !== notification.id)
+                      );
+                    }, 300);
+                  }}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="px-6 py-4 flex items-center justify-between">
@@ -986,6 +1226,7 @@ export default function Dashboard() {
                           message.createdAt ||
                           message.sentAt ||
                           message.receivedAt;
+
                         return (
                           <div
                             key={
@@ -1165,175 +1406,267 @@ export default function Dashboard() {
           )}
         </main>
 
-        {/* Right Sidebar - Participants & AI Settings */}
-        <aside className="w-80 bg-white border-l border-gray-100 flex flex-col">
-          <div className="p-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Participants
-            </h2>
-          </div>
+        {/* Right Sidebar - Participants & AI Settings - Only show when chatrooms exist */}
+        {chatrooms.length > 0 && (
+          <aside className="w-80 bg-white border-l border-gray-100 flex flex-col">
+            <div className="p-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Participants
+              </h2>
+            </div>
 
-          <div className="p-4 space-y-3">
-            {/* Participants List */}
-            {participants.length > 0 ? (
-              participants.map((participant: any) => (
-                <div
-                  key={participant.id || participant.userId}
-                  className="flex items-center space-x-3"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gray-100 text-gray-600 text-sm font-medium">
-                      {participant.user?.firstName && participant.user?.lastName
-                        ? `${participant.user.firstName[0]}${participant.user.lastName[0]}`
-                        : participant.user?.firstName
-                        ? participant.user.firstName[0]
-                        : participant.firstName && participant.lastName
-                        ? `${participant.firstName[0]}${participant.lastName[0]}`
-                        : participant.firstName
-                        ? participant.firstName[0]
-                        : "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {participant.user?.firstName && participant.user?.lastName
-                        ? `${participant.user.firstName} ${participant.user.lastName}`
-                        : participant.user?.firstName
-                        ? participant.user.firstName
-                        : participant.firstName && participant.lastName
-                        ? `${participant.firstName} ${participant.lastName}`
-                        : participant.firstName || "User"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {participant.role === "admin" ? "Admin" : "Member"}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-4">
-                <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Loading participants...</p>
-              </div>
-            )}
-          </div>
+            <div className="p-4 space-y-3">
+              {/* Participants List */}
+              {participants.length > 0 ? (
+                participants.map((participant: any) => {
+                  const isCurrentUser =
+                    participant.user?.clerkId === user?.id ||
+                    participant.clerkId === user?.id ||
+                    participant.userId === user?.id ||
+                    (participant.user?.firstName === user?.firstName &&
+                      participant.user?.lastName === user?.lastName);
 
-          <div className="p-4 border-t border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              AI Settings
-            </h3>
-            <div className="space-y-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start rounded-none"
-                    disabled={updateAiSettingsMutation.isPending}
-                  >
-                    <Brain className="w-4 h-4 mr-2" />
-                    AI Mode:{" "}
-                    {aiSettings?.aiMode === "auto-respond"
-                      ? "Auto-respond"
-                      : "Summoned (@AI only)"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>Select AI Mode</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (!selectedChatroomId || !aiSettings) return;
-                      updateAiSettingsMutation.mutate({
-                        chatroomId: selectedChatroomId,
-                        settings: { aiMode: "auto-respond" },
-                      });
-                    }}
-                  >
-                    <Brain className="w-4 h-4 mr-2" />
-                    Auto-respond Mode
-                    <p className="text-xs text-gray-500 mt-1">
-                      AI responds to all messages automatically
-                    </p>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (!selectedChatroomId || !aiSettings) return;
-                      updateAiSettingsMutation.mutate({
-                        chatroomId: selectedChatroomId,
-                        settings: { aiMode: "summoned" },
-                      });
-                    }}
-                  >
-                    <Brain className="w-4 h-4 mr-2" />
-                    Summoned Mode
-                    <p className="text-xs text-gray-500 mt-1">
-                      AI only responds when mentioned with @AI
-                    </p>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  const participantName =
+                    participant.user?.firstName && participant.user?.lastName
+                      ? `${participant.user.firstName} ${participant.user.lastName}`
+                      : participant.user?.firstName
+                      ? participant.user.firstName
+                      : participant.firstName && participant.lastName
+                      ? `${participant.firstName} ${participant.lastName}`
+                      : participant.firstName || "User";
 
-              <Dialog
-                open={isAiSettingsOpen}
-                onOpenChange={setIsAiSettingsOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start rounded-none"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Change AI Behavior
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Configure AI Assistant</DialogTitle>
-                    <DialogDescription>
-                      Customize how the AI assistant behaves in this chatroom.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        System Message
-                      </label>
-                      <Textarea
-                        placeholder="Enter custom instructions for the AI..."
-                        value={aiSystemMessage}
-                        onChange={(e) => setAiSystemMessage(e.target.value)}
-                        rows={5}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-gray-500">
-                        This message defines the AI's personality and behavior
-                        in this chatroom.
-                      </p>
+                  return (
+                    <div
+                      key={participant.id || participant.userId}
+                      className="flex items-center space-x-3 group"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-gray-100 text-gray-600 text-sm font-medium">
+                          {participant.user?.firstName &&
+                          participant.user?.lastName
+                            ? `${participant.user.firstName[0]}${participant.user.lastName[0]}`
+                            : participant.user?.firstName
+                            ? participant.user.firstName[0]
+                            : participant.firstName && participant.lastName
+                            ? `${participant.firstName[0]}${participant.lastName[0]}`
+                            : participant.firstName
+                            ? participant.firstName[0]
+                            : "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {participantName}
+                          {isCurrentUser && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              (You)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {participant.role === "admin" ? "Admin" : "Member"}
+                        </p>
+                      </div>
+
+                      {/* Remove button - only show for admins and not for current user */}
+                      {isCurrentUserAdmin && !isCurrentUser && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() =>
+                            setRemoveMemberDialog({
+                              isOpen: true,
+                              member: {
+                                ...participant,
+                                name: participantName,
+                                userId:
+                                  participant.user?.id || participant.userId,
+                              },
+                            })
+                          }
+                          title="Remove member"
+                        >
+                          <UserX className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
+                  );
+                })
+              ) : (
+                <div className="text-center py-4">
+                  <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    Loading participants...
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                AI Settings
+              </h3>
+              <div className="space-y-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      onClick={() => setIsAiSettingsOpen(false)}
-                      className="rounded-none"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSaveAiSettings}
+                      size="sm"
+                      className="w-full justify-start rounded-none"
                       disabled={updateAiSettingsMutation.isPending}
-                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-none"
                     >
-                      Save Settings
+                      <Brain className="w-4 h-4 mr-2" />
+                      AI Mode:{" "}
+                      {aiSettings?.aiMode === "auto-respond"
+                        ? "Auto-respond"
+                        : "Summoned (@AI only)"}
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuLabel>Select AI Mode</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!selectedChatroomId || !aiSettings) return;
+                        updateAiSettingsMutation.mutate({
+                          chatroomId: selectedChatroomId,
+                          settings: { aiMode: "auto-respond" },
+                        });
+                      }}
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      Auto-respond Mode
+                      <p className="text-xs text-gray-500 mt-1">
+                        AI responds to all messages automatically
+                      </p>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!selectedChatroomId || !aiSettings) return;
+                        updateAiSettingsMutation.mutate({
+                          chatroomId: selectedChatroomId,
+                          settings: { aiMode: "summoned" },
+                        });
+                      }}
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      Summoned Mode
+                      <p className="text-xs text-gray-500 mt-1">
+                        AI only responds when mentioned with @AI
+                      </p>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Dialog
+                  open={isAiSettingsOpen}
+                  onOpenChange={setIsAiSettingsOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start rounded-none"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Change AI Behavior
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Configure AI Assistant</DialogTitle>
+                      <DialogDescription>
+                        Customize how the AI assistant behaves in this chatroom.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          System Message
+                        </label>
+                        <Textarea
+                          placeholder="Enter custom instructions for the AI..."
+                          value={aiSystemMessage}
+                          onChange={(e) => setAiSystemMessage(e.target.value)}
+                          rows={5}
+                          className="resize-none"
+                        />
+                        <p className="text-xs text-gray-500">
+                          This message defines the AI's personality and behavior
+                          in this chatroom.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAiSettingsOpen(false)}
+                        className="rounded-none"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveAiSettings}
+                        disabled={updateAiSettingsMutation.isPending}
+                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-none"
+                      >
+                        Save Settings
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        )}
+
+        {/* Remove Member Confirmation Dialog */}
+        <Dialog
+          open={removeMemberDialog.isOpen}
+          onOpenChange={(open) =>
+            setRemoveMemberDialog({ isOpen: open, member: null })
+          }
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Member</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove{" "}
+                {removeMemberDialog.member?.name} from this chatroom? This
+                action cannot be undone and they will lose access to all
+                messages and files in this chatroom.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setRemoveMemberDialog({ isOpen: false, member: null })
+                }
+                className="rounded-none"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (removeMemberDialog.member && selectedChatroomId) {
+                    removeMemberMutation.mutate({
+                      chatroomId: selectedChatroomId,
+                      memberId: removeMemberDialog.member.userId,
+                    });
+                  }
+                }}
+                disabled={removeMemberMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-none"
+              >
+                {removeMemberMutation.isPending
+                  ? "Removing..."
+                  : "Remove Member"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

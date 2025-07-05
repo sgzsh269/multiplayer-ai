@@ -27,6 +27,7 @@ export interface SettingsUpdateMessage {
   settings: {
     aiMode: string;
     aiEnabled: boolean;
+    aiSystemMessage?: string;
   };
   timestamp: number;
   updatedBy: {
