@@ -72,21 +72,24 @@ export default class Server implements Party.Server {
           return new Response("Chatroom ID mismatch", { status: 400 });
         }
 
-        // Broadcast AI message to all connected clients
-        this.room.broadcast(
-          JSON.stringify({
-            type: "ai-message",
-            text: body.message,
-            sentAt: body.timestamp || Date.now(),
-            user: "AI",
-            userId: "ai-assistant",
-            displayName: "AI",
-            isAiMessage: true,
-            roomId: body.chatroomId,
-            receivedAt: Date.now(),
-          })
-        );
+        const aiMessageData = {
+          type: "ai-message",
+          text: body.message,
+          sentAt: body.timestamp || Date.now(),
+          user: "AI",
+          userId: "ai-assistant",
+          displayName: "AI",
+          isAiMessage: true,
+          roomId: body.chatroomId,
+          receivedAt: Date.now(),
+        };
 
+        console.log("🤖 Broadcasting AI message:", aiMessageData);
+
+        // Broadcast AI message to all connected clients
+        this.room.broadcast(JSON.stringify(aiMessageData));
+
+        console.log("✅ AI message broadcasted successfully");
         return new Response("AI message broadcasted", { status: 200 });
       } catch (e) {
         console.error("Error broadcasting AI message:", e);
@@ -97,6 +100,8 @@ export default class Server implements Party.Server {
     // Handle AI streaming tokens
     if (req.method === "POST" && req.url.includes("/ai-stream")) {
       try {
+        console.log("🔄 Received AI stream request");
+
         // Verify API key authentication
         const authHeader = req.headers.get("authorization");
         const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
@@ -120,8 +125,11 @@ export default class Server implements Party.Server {
           timestamp?: number;
         };
 
+        console.log("📦 AI stream body:", body);
+
         // Additional validation
         if (!body.type || !body.chatroomId || !body.streamId) {
+          console.error("❌ Invalid AI stream payload:", body);
           return new Response("Invalid request payload", { status: 400 });
         }
 
@@ -133,23 +141,26 @@ export default class Server implements Party.Server {
           return new Response("Chatroom ID mismatch", { status: 400 });
         }
 
-        // Broadcast streaming event to all connected clients
-        this.room.broadcast(
-          JSON.stringify({
-            type: "ai-stream",
-            streamType: body.type,
-            token: body.token,
-            streamId: body.streamId,
-            messageId: body.messageId,
-            timestamp: body.timestamp || Date.now(),
-            chatroomId: body.chatroomId,
-            receivedAt: Date.now(),
-          })
-        );
+        const broadcastData = {
+          type: "ai-stream",
+          streamType: body.type,
+          token: body.token,
+          streamId: body.streamId,
+          messageId: body.messageId,
+          timestamp: body.timestamp || Date.now(),
+          chatroomId: body.chatroomId,
+          receivedAt: Date.now(),
+        };
 
+        console.log("📡 Broadcasting AI stream:", broadcastData);
+
+        // Broadcast streaming event to all connected clients
+        this.room.broadcast(JSON.stringify(broadcastData));
+
+        console.log("✅ AI stream broadcasted successfully");
         return new Response("AI stream broadcasted", { status: 200 });
       } catch (e) {
-        console.error("Error broadcasting AI stream:", e);
+        console.error("❌ Error broadcasting AI stream:", e);
         return new Response("Error broadcasting AI stream", { status: 500 });
       }
     }
@@ -277,14 +288,141 @@ export default class Server implements Party.Server {
       }
     }
 
+    // Handle user message broadcasts from backend
+    if (req.method === "POST" && req.url.includes("/user-message")) {
+      try {
+        // Verify API key authentication
+        const authHeader = req.headers.get("authorization");
+        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+
+        if (!expectedApiKey) {
+          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          return new Response("Server configuration error", { status: 500 });
+        }
+
+        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
+          console.warn("Unauthorized user message broadcast attempt");
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const body = (await req.json()) as {
+          type: "chat-message";
+          text: string;
+          sentAt: number;
+          user: string;
+          userId: string;
+          displayName: string;
+          roomId: string;
+          receivedAt: number;
+        };
+
+        // Additional validation
+        if (!body.type || !body.text || !body.roomId || !body.userId) {
+          return new Response("Invalid request payload", { status: 400 });
+        }
+
+        // Ensure the chatroomId matches the room
+        if (body.roomId !== this.room.id) {
+          console.warn(
+            `Chatroom ID mismatch: ${body.roomId} vs ${this.room.id}`
+          );
+          return new Response("Chatroom ID mismatch", { status: 400 });
+        }
+
+        console.log(
+          `💬 Broadcasting user message for room ${this.room.id} from ${body.displayName}`
+        );
+
+        // Broadcast user message to all connected clients except the sender
+        // The sender shows the message optimistically
+        this.room.broadcast(JSON.stringify(body));
+
+        console.log("✅ User message broadcasted successfully");
+        return new Response("User message broadcasted", { status: 200 });
+      } catch (e) {
+        console.error("❌ Error broadcasting user message:", e);
+        return new Response("Error broadcasting user message", { status: 500 });
+      }
+    }
+
+    // Handle messages cleared broadcasts from backend
+    if (req.method === "POST" && req.url.includes("/messages-cleared")) {
+      try {
+        // Verify API key authentication
+        const authHeader = req.headers.get("authorization");
+        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+
+        if (!expectedApiKey) {
+          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+          return new Response("Server configuration error", { status: 500 });
+        }
+
+        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
+          console.warn("Unauthorized messages cleared broadcast attempt");
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const body = (await req.json()) as {
+          type: "messages-cleared";
+          chatroomId: string;
+          clearedBy: {
+            id: string;
+            name: string;
+          };
+          timestamp?: number;
+        };
+
+        // Additional validation
+        if (!body.type || !body.chatroomId || !body.clearedBy) {
+          return new Response("Invalid request payload", { status: 400 });
+        }
+
+        // Ensure the chatroomId matches the room
+        if (body.chatroomId !== this.room.id) {
+          console.warn(
+            `Chatroom ID mismatch: ${body.chatroomId} vs ${this.room.id}`
+          );
+          return new Response("Chatroom ID mismatch", { status: 400 });
+        }
+
+        console.log(
+          `🧹 Broadcasting messages cleared event for room ${this.room.id} by ${body.clearedBy.name}`
+        );
+
+        // Broadcast messages cleared event to all connected clients
+        this.room.broadcast(
+          JSON.stringify({
+            type: "messages-cleared",
+            chatroomId: body.chatroomId,
+            clearedBy: body.clearedBy,
+            timestamp: body.timestamp || Date.now(),
+            receivedAt: Date.now(),
+          })
+        );
+
+        console.log("✅ Messages cleared event broadcasted successfully");
+        return new Response("Messages cleared event broadcasted", {
+          status: 200,
+        });
+      } catch (e) {
+        console.error("❌ Error broadcasting messages cleared event:", e);
+        return new Response("Error broadcasting messages cleared event", {
+          status: 500,
+        });
+      }
+    }
+
     return new Response("Not found", { status: 404 });
   }
 
   async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+    console.log(`🔗 New connection to room ${this.room.id}`);
+
     // Expect Clerk JWT as a query param: ?token=...
     const url = new URL(ctx.request.url);
     const token = url.searchParams.get("token");
     if (!token) {
+      console.warn("❌ Connection without token");
       conn.send("Missing Clerk token. Connection will be limited.");
       // Optionally: conn.close();
       return;
@@ -295,20 +433,26 @@ export default class Server implements Party.Server {
       }); // TODO: move secret to env config
       // Attach user info to connection for later use
       (conn as any).clerkUser = session;
+      console.log(
+        `✅ User ${session.sub} authenticated in room ${this.room.id}`
+      );
       conn.send("Authenticated with Clerk");
     } catch (e) {
+      console.error("❌ Token verification failed:", e);
       conn.send("Invalid Clerk token. Connection will be limited.");
       // Optionally: conn.close();
     }
   }
 
   async onMessage(message: string, sender: Party.Connection) {
+    console.log(`📨 Received message in room ${this.room.id}:`, message);
+
     // Try to parse the message as JSON
     let parsed;
     try {
       parsed = JSON.parse(message);
     } catch (e) {
-      console.warn("Received non-JSON message:", message);
+      console.warn("❌ Received non-JSON message:", message);
       return;
     }
     // Expect Clerk JWT in the message (for extra security)
@@ -340,23 +484,27 @@ export default class Server implements Party.Server {
         this.clearTypingStatus(session.sub as string);
       }
 
-      // Log the message and user
+      const broadcastMessage = {
+        ...parsed,
+        senderId: sender.id,
+        userId: session.sub,
+        displayName: session.displayName,
+        roomId: this.room.id,
+        receivedAt: Date.now(),
+      };
+
       console.log(
-        `connection ${sender.id} (user ${session.sub}) sent message:`,
-        parsed
+        `💬 User ${session.sub} sent message, broadcasting to others:`,
+        broadcastMessage
       );
+
       // Broadcast the structured message to all clients (excluding sender)
       this.room.broadcast(
-        JSON.stringify({
-          ...parsed,
-          senderId: sender.id,
-          userId: session.sub,
-          displayName: session.displayName,
-          roomId: this.room.id,
-          receivedAt: Date.now(),
-        }),
+        JSON.stringify(broadcastMessage),
         [sender.id] // Exclude the sender by ID
       );
+
+      console.log(`✅ Message broadcasted to room ${this.room.id}`);
     } catch (e) {
       sender.send(JSON.stringify({ error: "Invalid Clerk token." }));
       return;
@@ -419,8 +567,13 @@ export default class Server implements Party.Server {
   }
 
   async onClose(connection: Party.Connection) {
-    // Clean up typing status when user disconnects
     const clerkUser = (connection as any).clerkUser;
+    console.log(
+      `🔌 Connection closed in room ${this.room.id}`,
+      clerkUser ? `for user ${clerkUser.sub}` : "(unauthenticated)"
+    );
+
+    // Clean up typing status when user disconnects
     if (clerkUser) {
       this.clearTypingStatus(clerkUser.sub as string);
     }

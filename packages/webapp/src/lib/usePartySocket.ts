@@ -56,23 +56,36 @@ export interface TypingEventMessage {
   roomId: string;
 }
 
+export interface MessagesClearedEvent {
+  type: "messages-cleared";
+  chatroomId: string;
+  clearedBy: {
+    id: string;
+    name: string;
+  };
+  timestamp: number;
+  receivedAt: number;
+}
+
 export function usePartySocket({
   chatroomId,
   user,
   onSettingsUpdate,
   onMemberEvent,
   onTypingEvent,
+  onMessagesClear,
 }: {
   chatroomId: string;
   user: string;
   onSettingsUpdate?: (update: SettingsUpdateMessage) => void;
   onMemberEvent?: (event: MemberEventMessage) => void;
   onTypingEvent?: (event: TypingEventMessage) => void;
+  onMessagesClear?: (event: MessagesClearedEvent) => void;
 }) {
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const [streamingAiMessage, setStreamingAiMessage] =
     useState<StreamingAiMessage | null>(null);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const connRef = useRef<PartySocket | null>(null);
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
@@ -94,10 +107,22 @@ export function usePartySocket({
       connRef.current = conn;
       conn.addEventListener("message", (event) => {
         try {
-          const data = JSON.parse(event.data);
+          // Check if the message is JSON before parsing
+          const messageData = event.data;
+          if (
+            typeof messageData !== "string" ||
+            (!messageData.startsWith("{") && !messageData.startsWith("["))
+          ) {
+            console.log("📢 PartyKit non-JSON message:", messageData);
+            return;
+          }
+
+          const data = JSON.parse(messageData);
+          console.log("🎉 PartyKit message received:", data);
 
           // Handle settings updates
           if (data.type === "settings-update" && onSettingsUpdate) {
+            console.log("⚙️ Settings update:", data);
             onSettingsUpdate(data as SettingsUpdateMessage);
             return;
           }
@@ -107,12 +132,14 @@ export function usePartySocket({
             (data.type === "member-joined" || data.type === "member-removed") &&
             onMemberEvent
           ) {
+            console.log("👥 Member event:", data);
             onMemberEvent(data as MemberEventMessage);
             return;
           }
 
           // Handle typing events
           if (data.type === "typing-start" || data.type === "typing-stop") {
+            console.log("⌨️ Typing event:", data);
             if (onTypingEvent) {
               onTypingEvent(data as TypingEventMessage);
             }
@@ -120,20 +147,35 @@ export function usePartySocket({
             // Update local typing state
             if (isMounted) {
               setTypingUsers((prev) => {
-                const newSet = new Set(prev);
+                const newMap = new Map(prev);
                 if (data.type === "typing-start") {
-                  newSet.add(data.userId);
+                  newMap.set(data.userId, data.displayName);
                 } else {
-                  newSet.delete(data.userId);
+                  newMap.delete(data.userId);
                 }
-                return newSet;
+                return newMap;
               });
+            }
+            return;
+          }
+
+          // Handle messages cleared event
+          if (data.type === "messages-cleared") {
+            console.log("🧹 Messages cleared event:", data);
+            if (onMessagesClear) {
+              onMessagesClear(data as MessagesClearedEvent);
+            }
+            // Clear local messages state
+            if (isMounted) {
+              setMessages([]);
+              setStreamingAiMessage(null);
             }
             return;
           }
 
           // Handle AI streaming events
           if (data.type === "ai-stream") {
+            console.log("🤖 AI stream event:", data);
             if (data.streamType === "start") {
               setStreamingAiMessage({
                 streamId: data.streamId,
@@ -158,18 +200,24 @@ export function usePartySocket({
                   isActive: false,
                 };
               });
-              // Clear streaming message after a delay
+              // Clear streaming message after a longer delay to prevent cutoff
               setTimeout(() => {
                 setStreamingAiMessage(null);
-              }, 500);
+              }, 2000);
             }
             return;
           }
 
           // Handle regular messages
-          if (isMounted) setMessages((prev) => [...prev, data]);
+          console.log("💬 Adding regular message to state:", data);
+          if (isMounted)
+            setMessages((prev) => {
+              const newMessages = [...prev, data];
+              console.log("📝 Updated messages state:", newMessages);
+              return newMessages;
+            });
         } catch (e) {
-          // ignore malformed
+          console.error("❌ Error parsing PartyKit message:", e, event.data);
         }
       });
     })();

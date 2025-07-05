@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { params } = await context;
   const { userId } = await auth();
-  const chatroomId = params.id; // UUID string, no need to parse
+  const { id: chatroomId } = await params;
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,7 +50,8 @@ export async function PATCH(
 ) {
   const { params } = await context;
   const { userId } = await auth();
-  const chatroomId = params.id; // UUID string, no need to parse
+
+  const { id: chatroomId } = await params;
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

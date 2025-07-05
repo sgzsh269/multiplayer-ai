@@ -9,7 +9,9 @@ export async function GET(
   context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
   const { params } = await context;
-  const chatroomId = params.id;
+  const { id } = await params;
+
+  const chatroomId = id;
 
   try {
     const { userId: clerkUserId } = await auth();
@@ -95,7 +97,7 @@ export async function DELETE(
   context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
   const { params } = await context;
-  const chatroomId = params.id;
+  const { id: chatroomId } = await params;
 
   try {
     const { userId: clerkUserId } = await auth();
@@ -105,7 +107,11 @@ export async function DELETE(
 
     // Find the user in the database
     const user = await db
-      .select({ id: users.id })
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
       .from(users)
       .where(eq(users.clerkId, clerkUserId));
 
@@ -144,6 +150,38 @@ export async function DELETE(
       .delete(messages)
       .where(eq(messages.chatroomId, chatroomId))
       .returning({ id: messages.id });
+
+    // Broadcast the clear event to PartyKit
+    try {
+      const apiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
+      if (apiKey) {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/messages-cleared`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              type: "messages-cleared",
+              chatroomId: chatroomId,
+              clearedBy: {
+                id: user[0].id,
+                name:
+                  user[0].firstName && user[0].lastName
+                    ? `${user[0].firstName} ${user[0].lastName}`
+                    : user[0].firstName || user[0].lastName || "Admin",
+              },
+              timestamp: Date.now(),
+            }),
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to broadcast clear messages to PartyKit:", error);
+      // Don't fail the request if PartyKit broadcast fails
+    }
 
     return NextResponse.json({
       success: true,

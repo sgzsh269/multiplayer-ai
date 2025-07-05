@@ -6,16 +6,70 @@ import { eq, and } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } } | Promise<{ params: { id: string } }>
 ) {
-  // Dummy members list
-  const { userId } = await auth();
-  return NextResponse.json({
-    members: [
-      { id: 1, firstName: "Alice", lastName: null, role: "admin" },
-      { id: 2, firstName: "Bob", lastName: null, role: "member" },
-    ],
-  });
+  const { params } = await context;
+  const { id: chatroomId } = await params;
+
+  try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get user from Clerk ID
+    const currentUser = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId));
+
+    if (!currentUser[0]) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user is a member of this chatroom
+    const membership = await db
+      .select()
+      .from(chatroom_members)
+      .where(
+        and(
+          eq(chatroom_members.userId, currentUser[0].id),
+          eq(chatroom_members.chatroomId, chatroomId)
+        )
+      );
+
+    if (membership.length === 0) {
+      return NextResponse.json(
+        { error: "Forbidden: Not a member of this chatroom" },
+        { status: 403 }
+      );
+    }
+
+    // Get all members of the chatroom
+    const members = await db
+      .select({
+        id: chatroom_members.id,
+        userId: chatroom_members.userId,
+        role: chatroom_members.role,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          avatarUrl: users.avatarUrl,
+        },
+      })
+      .from(chatroom_members)
+      .innerJoin(users, eq(chatroom_members.userId, users.id))
+      .where(eq(chatroom_members.chatroomId, chatroomId));
+
+    return NextResponse.json({ members });
+  } catch (error) {
+    console.error("Error fetching members:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch members" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(
