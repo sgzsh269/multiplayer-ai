@@ -37,8 +37,6 @@ import {
   Upload,
   Clock,
   Settings,
-  Search,
-  Bell,
   LogOut,
   Copy,
   ExternalLink,
@@ -62,7 +60,6 @@ interface Chatroom {
 }
 
 export default function Dashboard() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [isCreateChatroomOpen, setIsCreateChatroomOpen] = useState(false);
   const [isJoinChatroomOpen, setIsJoinChatroomOpen] = useState(false);
   const { signOut } = useClerk();
@@ -283,21 +280,9 @@ export default function Dashboard() {
                 AI Playground
               </span>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search chatrooms, files, or team members..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-80"
-              />
-            </div>
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              <Bell className="w-4 h-4" />
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -485,59 +470,29 @@ export default function Dashboard() {
                   key={chatroom.id}
                   className="hover:shadow-md transition-shadow"
                 >
-                  <CardHeader>
+                  <CardContent className="py-1 px-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex flex-col space-y-1">
                         <CardTitle className="text-lg">
                           {chatroom.name}
                         </CardTitle>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Open Chatroom
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" />
-                            Copy Link
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Settings className="mr-2 h-4 w-4" />
-                            Settings
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <CardDescription>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span className="flex items-center">
-                          <Users className="w-4 h-4 mr-1" />
-                          {chatroom.participantCount || 0} participants
-                        </span>
-                        <span className="flex items-center">
-                          <MessageSquare className="w-4 h-4 mr-1" />
-                          {chatroom.messageCount || 0} messages
-                        </span>
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                        {/* Display participant avatars removed for MVP list view, only count is shown */}
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span className="flex items-center">
+                            <Users className="w-4 h-4 mr-1" />
+                            {chatroom.participantCount || 0} participants
+                          </span>
+                          <span className="flex items-center">
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            {chatroom.messageCount || 0} messages
+                          </span>
+                        </div>
                       </div>
                       <Button
                         size="sm"
                         className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                         onClick={() => router.push(`/chatrooms/${chatroom.id}`)}
                       >
-                        {"Open Chatroom"}
+                        Open Chatroom
                       </Button>
                     </div>
                   </CardContent>

@@ -12,6 +12,39 @@ export async function GET(
   const chatroomId = params.id;
 
   try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Find the user in the database
+    const user = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId));
+
+    if (!user[0]) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Validate that user is a member of this chatroom
+    const membership = await db
+      .select()
+      .from(chatroom_members)
+      .where(
+        and(
+          eq(chatroom_members.userId, user[0].id),
+          eq(chatroom_members.chatroomId, chatroomId)
+        )
+      );
+
+    if (membership.length === 0) {
+      return NextResponse.json(
+        { error: "Forbidden: Not a member of this chatroom" },
+        { status: 403 }
+      );
+    }
+
     const chatMessages = await db
       .select({
         id: messages.id,
@@ -151,6 +184,24 @@ export async function POST(
     return NextResponse.json(
       { error: "Chatroom ID and content are required" },
       { status: 400 }
+    );
+  }
+
+  // Validate that user is a member of this chatroom
+  const membership = await db
+    .select()
+    .from(chatroom_members)
+    .where(
+      and(
+        eq(chatroom_members.userId, user[0].id),
+        eq(chatroom_members.chatroomId, chatroomId)
+      )
+    );
+
+  if (membership.length === 0) {
+    return NextResponse.json(
+      { error: "Forbidden: Not a member of this chatroom" },
+      { status: 403 }
     );
   }
 
