@@ -48,7 +48,7 @@
 }
 
 @layer base {
-  * {
+  *:not(.avatar):not([class*="avatar"]) {
     border-color: var(--border);
     box-shadow: none !important;
     border-radius: 0 !important;
@@ -63,9 +63,21 @@
   }
 }
 
-/* Avatar styles - exception to no border radius rule */
-.avatar {
-  border-radius: 50% !important;
+/* Avatar styles - rounded corners */
+.avatar,
+[class*="avatar"] {
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+/* Specific styling for small member list avatars */
+.avatar.w-4.h-4 {
+  min-width: 20px !important;
+  min-height: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
 }
 
 /* Custom modal overlay */

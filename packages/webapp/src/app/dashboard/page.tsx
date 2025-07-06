@@ -36,7 +36,7 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarInitials } from "@/lib/utils";
 import { usePartySocket } from "@/lib/usePartySocket";
 import {
   MemberEventMessage,
@@ -760,7 +760,11 @@ export default function Dashboard() {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 w-full hover:bg-neutral-100 p-1 rounded">
                 <div className="avatar w-6 h-6 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
-                  {user?.firstName?.[0] || user?.username?.[0] || "U"}
+                  {getAvatarInitials(
+                    user?.firstName,
+                    user?.lastName,
+                    user?.username?.[0] || "U"
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-neutral-900 truncate">
@@ -893,13 +897,22 @@ export default function Dashboard() {
                         : user?.firstName || user?.username || "Unknown User");
 
                   return (
-                    <div key={`${message.id}-${index}`} className="flex gap-2">
+                    <div
+                      key={`${message.id}-${index}`}
+                      className="flex gap-2 mb-3"
+                    >
                       <div
                         className={`avatar w-6 h-6 flex items-center justify-center text-xs text-white font-medium flex-shrink-0 ${
                           isAi ? "bg-green-700" : "bg-neutral-400"
                         }`}
                       >
-                        {isAi ? "AI" : userName[0]?.toUpperCase() || "U"}
+                        {isAi
+                          ? "AI"
+                          : getAvatarInitials(
+                              message.sender?.firstName,
+                              message.sender?.lastName,
+                              userName[0]?.toUpperCase() || "U"
+                            )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-1">
@@ -933,7 +946,7 @@ export default function Dashboard() {
               })()}
 
               {partyStreamingMessage?.isActive && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-3">
                   <div className="avatar w-6 h-6 bg-green-700 flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
                     AI
                   </div>
@@ -1071,7 +1084,11 @@ export default function Dashboard() {
                         >
                           <div className="flex items-center gap-2">
                             <div className="avatar w-4 h-4 bg-green-700 flex items-center justify-center text-xs text-white font-medium">
-                              {participant.user?.firstName?.[0] || "U"}
+                              {getAvatarInitials(
+                                participant.user?.firstName,
+                                participant.user?.lastName,
+                                "U"
+                              )}
                             </div>
                             <div className="text-xs text-neutral-700 truncate">
                               {participant.user?.firstName}{" "}
@@ -1115,7 +1132,11 @@ export default function Dashboard() {
                         >
                           <div className="flex items-center gap-2">
                             <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
-                              {participant.user?.firstName?.[0] || "U"}
+                              {getAvatarInitials(
+                                participant.user?.firstName,
+                                participant.user?.lastName,
+                                "U"
+                              )}
                             </div>
                             <div className="text-xs text-neutral-700 truncate">
                               {participant.user?.firstName}{" "}
