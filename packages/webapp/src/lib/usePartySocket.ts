@@ -123,6 +123,13 @@ export function usePartySocket({
     onMessagesClearRef.current = onMessagesClear;
   }, [onMessagesClear]);
 
+  // Clear messages when chatroom changes to prevent cross-chatroom message leakage
+  useEffect(() => {
+    setMessages([]);
+    setStreamingAiMessage(null);
+    setTypingUsers(new Map());
+  }, [chatroomId]);
+
   useEffect(() => {
     if (!chatroomId || !user || !isLoaded || !isSignedIn) return;
     let conn: PartySocket | null = null;

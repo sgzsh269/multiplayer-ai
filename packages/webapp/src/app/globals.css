@@ -264,3 +264,42 @@ select:focus {
 .modal-button.modal-button--danger:disabled {
   opacity: 0.5 !important;
 }
+
+/* Markdown table styles - override global border removal */
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 8px 0 !important;
+  font-size: 11px !important;
+}
+
+.prose table th,
+.prose table td {
+  border: 1px solid var(--border) !important;
+  padding: 4px 8px !important;
+  text-align: left !important;
+  vertical-align: top !important;
+}
+
+.prose table th {
+  background-color: var(--muted) !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+}
+
+.prose table tr:nth-child(even) {
+  background-color: var(--muted) !important;
+}
+
+.prose table tr:nth-child(odd) {
+  background-color: var(--background) !important;
+}
+
+/* Ensure table borders are visible */
+.prose table,
+.prose table th,
+.prose table td {
+  border-style: solid !important;
+  border-width: 1px !important;
+  border-color: var(--border) !important;
+}

@@ -22,44 +22,49 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-neutral-200 bg-background">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+            <div className="w-6 h-6 bg-green-700 flex items-center justify-center">
+              <Brain className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">
+            <span className="text-sm font-medium text-neutral-900">
               AI Playground
             </span>
           </div>
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-4">
             <a
               href="#features"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-xs text-neutral-600 hover:text-neutral-900"
             >
               Features
             </a>
             <a
               href="#benefits"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-xs text-neutral-600 hover:text-neutral-900"
             >
               Benefits
             </a>
             <a
               href="#pricing"
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-xs text-neutral-600 hover:text-neutral-900"
             >
               Pricing
             </a>
-            <Button asChild variant="outline" size="sm">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="text-xs px-2 py-1"
+            >
               <Link href="/sign-in">Sign In</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="bg-green-700 hover:bg-green-800 text-white text-xs px-2 py-1"
             >
               <Link href="/sign-up">Get Started</Link>
             </Button>
@@ -68,59 +73,53 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
+      <section className="py-12 px-4">
+        <div className="container mx-auto text-center max-w-3xl">
           <Badge
             variant="secondary"
-            className="mb-4 bg-purple-100 text-purple-700 border-purple-200"
+            className="mb-3 bg-green-100 text-green-700 border-green-200 text-xs"
           >
             🚀 Now in Beta
           </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Multi-User
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              {" "}
-              Collaborative
-            </span>
-            <br />
-            AI Playground
+          <h1 className="text-3xl md:text-4xl font-medium text-neutral-900 mb-4 leading-tight">
+            Multi-User Collaborative AI Playground
           </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+          <p className="text-sm text-neutral-600 mb-6 leading-relaxed max-w-2xl mx-auto">
             Enable teams to collaboratively interact with advanced AI in
             real-time. Foster group learning, brainstorming, research, and
             decision-making through an intuitive conversational interface.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
             <Button
               asChild
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg px-8 py-3"
+              size="sm"
+              className="bg-green-700 hover:bg-green-800 text-white text-xs px-4 py-2"
             >
               <Link href="/sign-up">
                 Start Collaborating
-                <ArrowRight className="ml-2 w-5 h-5" />
+                <ArrowRight className="ml-1 w-3 h-3" />
               </Link>
             </Button>
             <Button
               asChild
               variant="outline"
-              size="lg"
-              className="text-lg px-8 py-3 bg-transparent"
+              size="sm"
+              className="text-xs px-4 py-2"
             >
               <Link href="/sign-in">Watch Demo</Link>
             </Button>
           </div>
-          <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-500">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+          <div className="mt-8 flex items-center justify-center space-x-6 text-xs text-neutral-500">
+            <div className="flex items-center space-x-1">
+              <CheckCircle className="w-3 h-3 text-green-600" />
               <span>Free to start</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+            <div className="flex items-center space-x-1">
+              <CheckCircle className="w-3 h-3 text-green-600" />
               <span>No credit card required</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
+            <div className="flex items-center space-x-1">
+              <CheckCircle className="w-3 h-3 text-green-600" />
               <span>Enterprise ready</span>
             </div>
           </div>
@@ -128,90 +127,102 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 bg-white">
+      <section id="features" className="py-12 px-4 border-t border-neutral-200">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-medium text-neutral-900 mb-2">
               Powerful Collaborative Features
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-sm text-neutral-600 max-w-xl mx-auto">
               Everything your team needs to work together with AI effectively
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-purple-600" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-green-100 flex items-center justify-center mb-2">
+                  <Users className="w-4 h-4 text-green-700" />
                 </div>
-                <CardTitle>Real-Time Collaboration</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  Real-Time Collaboration
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   Multiple users can interact with AI simultaneously, seeing
                   each other's contributions in real-time
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
-                  <Upload className="w-6 h-6 text-pink-600" />
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-blue-100 flex items-center justify-center mb-2">
+                  <Upload className="w-4 h-4 text-blue-700" />
                 </div>
-                <CardTitle>File & Image Uploads</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  File & Image Uploads
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   Seamlessly share and reference documents, images, and other
                   files within your collaborative sessions
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                  <Globe className="w-6 h-6 text-indigo-600" />
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-indigo-100 flex items-center justify-center mb-2">
+                  <Globe className="w-4 h-4 text-indigo-700" />
                 </div>
-                <CardTitle>Real-Time Data Access</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  Real-Time Data Access
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   AI can access external APIs and real-time data sources to
                   provide up-to-date information
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <MessageSquare className="w-6 h-6 text-green-600" />
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-orange-100 flex items-center justify-center mb-2">
+                  <MessageSquare className="w-4 h-4 text-orange-700" />
                 </div>
-                <CardTitle>Conversational Interface</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  Conversational Interface
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   Intuitive chat-based interaction that feels natural and
                   encourages team participation
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-orange-600" />
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-red-100 flex items-center justify-center mb-2">
+                  <Shield className="w-4 h-4 text-red-700" />
                 </div>
-                <CardTitle>Secure & Private</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  Secure & Private
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   Enterprise-grade security ensures your team's conversations
                   and data remain protected
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-teal-600" />
+            <Card className="border border-neutral-200 bg-background">
+              <CardHeader className="p-3">
+                <div className="w-8 h-8 bg-purple-100 flex items-center justify-center mb-2">
+                  <Zap className="w-4 h-4 text-purple-700" />
                 </div>
-                <CardTitle>Advanced AI Tools</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-sm font-medium">
+                  Advanced AI Tools
+                </CardTitle>
+                <CardDescription className="text-xs text-neutral-600">
                   Access to cutting-edge AI models and specialized tools for
                   research, analysis, and creativity
                 </CardDescription>
@@ -224,75 +235,75 @@ export default function LandingPage() {
       {/* Benefits Section */}
       <section
         id="benefits"
-        className="py-20 px-4 bg-gradient-to-br from-purple-50 to-pink-50"
+        className="py-12 px-4 border-t border-neutral-200 bg-neutral-50"
       >
         <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-medium text-neutral-900 mb-2">
               Transform How Your Team Works
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-sm text-neutral-600 max-w-xl mx-auto">
               Unlock new possibilities for collaborative knowledge work and
               problem-solving
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Brain className="w-4 h-4 text-white" />
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Brain className="w-3 h-3 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-neutral-900 mb-1">
                     Enhanced Brainstorming
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-xs text-neutral-600">
                     Generate ideas collectively with AI assistance, building on
                     each other's thoughts in real-time.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <FileText className="w-4 h-4 text-white" />
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <FileText className="w-3 h-3 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-neutral-900 mb-1">
                     Accelerated Research
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-xs text-neutral-600">
                     Collaborate on research projects with AI that can access and
                     analyze real-time data sources.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Users className="w-4 h-4 text-white" />
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-indigo-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Users className="w-3 h-3 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-neutral-900 mb-1">
                     Team Learning
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-xs text-neutral-600">
                     Learn together as a group, with AI providing explanations
                     and insights tailored to your team's needs.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Zap className="w-4 h-4 text-white" />
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-orange-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap className="w-3 h-3 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-neutral-900 mb-1">
                     Better Decision Making
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-xs text-neutral-600">
                     Make informed decisions with AI-powered analysis and
                     multiple perspectives from your team.
                   </p>
@@ -300,45 +311,51 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl p-6 mb-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-8 h-8 bg-purple-600 rounded-full"></div>
-                  <span className="font-medium text-gray-900">Sarah Chen</span>
-                  <Badge variant="secondary" className="text-xs">
+            <div className="bg-background border border-neutral-200 p-4">
+              <div className="bg-neutral-50 border border-neutral-200 p-3 mb-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-6 h-6 bg-green-700 flex items-center justify-center">
+                    <span className="text-xs text-white font-medium">SC</span>
+                  </div>
+                  <span className="text-xs font-medium text-neutral-900">
+                    Sarah Chen
+                  </span>
+                  <Badge variant="secondary" className="text-xs px-1 py-0">
                     Online
                   </Badge>
                 </div>
-                <div className="bg-white rounded-lg p-3 mb-3">
-                  <p className="text-sm text-gray-700">
+                <div className="bg-background border border-neutral-200 p-2 mb-2">
+                  <p className="text-xs text-neutral-700">
                     "Can we analyze the market trends for Q4?"
                   </p>
                 </div>
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-5 h-5 bg-green-700 flex items-center justify-center">
                     <Brain className="w-3 h-3 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-gray-600">
+                  <span className="text-xs font-medium text-neutral-600">
                     AI Assistant
                   </span>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                  <p className="text-sm text-gray-700">
+                <div className="bg-neutral-100 border border-neutral-200 p-2 mb-2">
+                  <p className="text-xs text-neutral-700">
                     "I'll analyze the latest market data. Here are the key
                     trends I'm seeing..."
                   </p>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-600 rounded-full"></div>
-                  <span className="font-medium text-gray-900">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-blue-700 flex items-center justify-center">
+                    <span className="text-xs text-white font-medium">MR</span>
+                  </div>
+                  <span className="text-xs font-medium text-neutral-900">
                     Mike Rodriguez
                   </span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs px-1 py-0">
                     Typing...
                   </Badge>
                 </div>
               </div>
-              <p className="text-center text-gray-600 text-sm">
+              <p className="text-center text-neutral-600 text-xs">
                 Real-time collaboration in action
               </p>
             </div>
@@ -347,132 +364,132 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-purple-600 to-pink-600">
+      <section className="py-12 px-4 border-t border-neutral-200 bg-green-700">
         <div className="container mx-auto text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
+          <h2 className="text-xl font-medium text-white mb-3">
             Ready to Transform Your Team's Collaboration?
           </h2>
-          <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-sm text-green-100 mb-6 max-w-xl mx-auto">
             Join teams already using AI Playground to enhance their
             collaborative work and decision-making processes.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
             <Button
-              size="lg"
+              size="sm"
               variant="secondary"
-              className="text-lg px-8 py-3 bg-white text-purple-600 hover:bg-gray-50"
+              className="text-xs px-4 py-2 bg-background text-green-700 hover:bg-neutral-100"
             >
               Start Free Trial
-              <ArrowRight className="ml-2 w-5 h-5" />
+              <ArrowRight className="ml-1 w-3 h-3" />
             </Button>
             <Button
-              size="lg"
+              size="sm"
               variant="outline"
-              className="text-lg px-8 py-3 border-white text-white hover:bg-white/10 bg-transparent"
+              className="text-xs px-4 py-2 border-white text-white hover:bg-white/10"
             >
               Schedule Demo
             </Button>
           </div>
-          <p className="text-purple-200 text-sm mt-6">
+          <p className="text-green-200 text-xs mt-4">
             No credit card required • 14-day free trial • Cancel anytime
           </p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4">
+      <footer className="bg-neutral-900 text-neutral-300 py-8 px-4">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-6">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 bg-green-700 flex items-center justify-center">
+                  <Brain className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">
+                <span className="text-sm font-medium text-white">
                   AI Playground
                 </span>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-neutral-400 text-xs">
                 Empowering teams to collaborate with AI for better outcomes.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
+              <h4 className="text-xs font-medium text-white mb-2">Product</h4>
+              <ul className="space-y-1 text-xs">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Features
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Pricing
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Security
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     API
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
+              <h4 className="text-xs font-medium text-white mb-2">Company</h4>
+              <ul className="space-y-1 text-xs">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     About
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Blog
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Careers
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Contact
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Support</h4>
-              <ul className="space-y-2 text-sm">
+              <h4 className="text-xs font-medium text-white mb-2">Support</h4>
+              <ul className="space-y-1 text-xs">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Help Center
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Documentation
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Community
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <a href="#" className="hover:text-white">
                     Status
                   </a>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+          <div className="border-t border-neutral-800 mt-6 pt-6 text-center text-xs text-neutral-400">
             <p>&copy; 2024 AI Playground. All rights reserved.</p>
           </div>
         </div>
