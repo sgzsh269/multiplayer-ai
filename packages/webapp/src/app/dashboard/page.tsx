@@ -806,12 +806,20 @@ export default function Dashboard() {
                   {selectedChatroom.name}
                 </div>
                 {isCurrentUserAdmin && (
-                  <button
-                    onClick={handleShareInvite}
-                    className="px-2 py-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
-                  >
-                    {linkCopied ? "COPIED" : "SHARE INVITE"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleShareInvite}
+                      className="px-2 py-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+                    >
+                      {linkCopied ? "COPIED" : "SHARE INVITE"}
+                    </button>
+                    <button
+                      onClick={() => setIsClearMessagesOpen(true)}
+                      className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200"
+                    >
+                      CLEAR MESSAGES
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -824,15 +832,30 @@ export default function Dashboard() {
                   ...partyMessages.filter(
                     (msg) =>
                       !initialMessages.some((im: any) => {
-                        // Check for exact content and timestamp match to prevent duplicates
+                        // More robust duplicate detection
+                        // First check if they have the same ID (most reliable)
+                        if (im.id && msg.id && im.id === msg.id) {
+                          return true;
+                        }
+
+                        // If no IDs match, check content and user with a more lenient time window
                         const contentMatch =
-                          (im.content || im.text) === msg.text;
+                          (im.content || im.text) === (msg.content || msg.text);
+                        const userMatch =
+                          im.userId === msg.userId ||
+                          im.sender?.id === msg.userId ||
+                          im.user === msg.user;
+
+                        // More lenient time matching (10 seconds instead of 5)
                         const timeMatch =
                           Math.abs(
                             new Date(im.createdAt || im.sentAt || 0).getTime() -
-                              new Date(msg.sentAt || 0).getTime()
-                          ) < 5000; // Within 5 seconds
-                        return contentMatch && timeMatch;
+                              new Date(
+                                msg.createdAt || msg.sentAt || 0
+                              ).getTime()
+                          ) < 10000; // Within 10 seconds
+
+                        return contentMatch && userMatch && timeMatch;
                       })
                   ),
                 ];
