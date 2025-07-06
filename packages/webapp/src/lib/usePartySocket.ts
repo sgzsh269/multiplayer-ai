@@ -29,6 +29,11 @@ export interface SettingsUpdateMessage {
     aiEnabled: boolean;
     aiSystemMessage?: string;
   };
+  updatedFields?: {
+    aiMode?: boolean;
+    aiEnabled?: boolean;
+    aiSystemMessage?: boolean;
+  };
   timestamp: number;
   updatedBy: {
     id: number;
@@ -86,12 +91,37 @@ export function usePartySocket({
   const [messages, setMessages] = useState<PartyMessage[]>([]);
   const [streamingAiMessage, setStreamingAiMessage] =
     useState<StreamingAiMessage | null>(null);
-  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(
+    new Map()
+  );
   const connRef = useRef<PartySocket | null>(null);
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
   // Track typing timeout for auto-cleanup
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Use refs to store callback functions to avoid dependency issues
+  const onSettingsUpdateRef = useRef(onSettingsUpdate);
+  const onMemberEventRef = useRef(onMemberEvent);
+  const onTypingEventRef = useRef(onTypingEvent);
+  const onMessagesClearRef = useRef(onMessagesClear);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onSettingsUpdateRef.current = onSettingsUpdate;
+  }, [onSettingsUpdate]);
+
+  useEffect(() => {
+    onMemberEventRef.current = onMemberEvent;
+  }, [onMemberEvent]);
+
+  useEffect(() => {
+    onTypingEventRef.current = onTypingEvent;
+  }, [onTypingEvent]);
+
+  useEffect(() => {
+    onMessagesClearRef.current = onMessagesClear;
+  }, [onMessagesClear]);
 
   useEffect(() => {
     if (!chatroomId || !user || !isLoaded || !isSignedIn) return;
@@ -122,27 +152,27 @@ export function usePartySocket({
           console.log("🎉 PartyKit message received:", data);
 
           // Handle settings updates
-          if (data.type === "settings-update" && onSettingsUpdate) {
+          if (data.type === "settings-update" && onSettingsUpdateRef.current) {
             console.log("⚙️ Settings update:", data);
-            onSettingsUpdate(data as SettingsUpdateMessage);
+            onSettingsUpdateRef.current(data as SettingsUpdateMessage);
             return;
           }
 
           // Handle member events
           if (
             (data.type === "member-joined" || data.type === "member-removed") &&
-            onMemberEvent
+            onMemberEventRef.current
           ) {
             console.log("👥 Member event:", data);
-            onMemberEvent(data as MemberEventMessage);
+            onMemberEventRef.current(data as MemberEventMessage);
             return;
           }
 
           // Handle typing events
           if (data.type === "typing-start" || data.type === "typing-stop") {
             console.log("⌨️ Typing event:", data);
-            if (onTypingEvent) {
-              onTypingEvent(data as TypingEventMessage);
+            if (onTypingEventRef.current) {
+              onTypingEventRef.current(data as TypingEventMessage);
             }
 
             // Update local typing state
@@ -163,8 +193,8 @@ export function usePartySocket({
           // Handle messages cleared event
           if (data.type === "messages-cleared") {
             console.log("🧹 Messages cleared event:", data);
-            if (onMessagesClear) {
-              onMessagesClear(data as MessagesClearedEvent);
+            if (onMessagesClearRef.current) {
+              onMessagesClearRef.current(data as MessagesClearedEvent);
             }
             // Clear local messages state
             if (isMounted) {
@@ -196,15 +226,20 @@ export function usePartySocket({
             } else if (data.streamType === "complete") {
               setStreamingAiMessage((prev) => {
                 if (!prev || prev.streamId !== data.streamId) return prev;
+
+                // Don't convert to permanent message here - the server will send the actual message
+                // Just mark as inactive and let the server-sent message handle persistence
+
                 return {
                   ...prev,
                   isActive: false,
                 };
               });
-              // Clear streaming message after a longer delay to prevent cutoff
+
+              // Clear streaming message after a short delay to allow server message to arrive
               setTimeout(() => {
                 setStreamingAiMessage(null);
-              }, 2000);
+              }, 1000);
             }
             return;
           }
@@ -230,16 +265,7 @@ export function usePartySocket({
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [
-    chatroomId,
-    user,
-    isLoaded,
-    isSignedIn,
-    getToken,
-    onSettingsUpdate,
-    onMemberEvent,
-    onTypingEvent,
-  ]);
+  }, [chatroomId, user, isLoaded, isSignedIn, getToken]);
 
   const sendMessage = async (text: string) => {
     if (!connRef.current) return;

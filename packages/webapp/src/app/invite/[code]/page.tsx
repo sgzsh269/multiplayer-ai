@@ -17,7 +17,7 @@ interface InvitePageProps {
   params: { code: string };
 }
 
-export default function InvitePage({ params }: InvitePageProps) {
+export default async function InvitePage({ params }: InvitePageProps) {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
   const [status, setStatus] = useState<
@@ -26,6 +26,8 @@ export default function InvitePage({ params }: InvitePageProps) {
   const [error, setError] = useState<string>("");
   const [chatroomName, setChatroomName] = useState<string>("");
   const [chatroomId, setChatroomId] = useState<string>("");
+
+  const { code } = await params;
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -40,13 +42,13 @@ export default function InvitePage({ params }: InvitePageProps) {
 
     // User is signed in, process the invite
     processInvite();
-  }, [isLoaded, isSignedIn, params.code]);
+  }, [isLoaded, isSignedIn, code]);
 
   const processInvite = async () => {
     try {
       setStatus("loading");
 
-      const response = await fetch(`/api/invite/${params.code}`, {
+      const response = await fetch(`/api/invite/${code}`, {
         method: "POST",
       });
 

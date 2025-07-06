@@ -2,17 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -29,27 +20,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Modal, ModalFooter, ModalButton } from "@/components/ui/modal";
 import {
   Plus,
   Users,
-  Brain,
-  FileText,
-  Upload,
-  Clock,
   Settings,
   LogOut,
-  Copy,
-  ExternalLink,
-  MessageSquare,
-  Calendar,
-  Filter,
-  MoreHorizontal,
   Send,
-  Hash,
-  Share2,
-  Link,
+  MoreHorizontal,
   Trash2,
   UserX,
+  User,
 } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -73,14 +54,6 @@ interface Chatroom {
   createdAt: string;
   participantCount: number;
   messageCount: number;
-}
-
-interface Message {
-  id: string;
-  content: string;
-  sender: string;
-  timestamp: string;
-  type: "user" | "ai";
 }
 
 interface StatusNotification {
@@ -145,7 +118,6 @@ export default function Dashboard() {
       setIsCreateChatroomOpen(false);
       setNewChatroomName("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
-      // Auto-select the newly created chatroom
       if (data?.chatroom?.id) {
         setSelectedChatroomId(data.chatroom.id);
       }
@@ -160,7 +132,6 @@ export default function Dashboard() {
       setJoinError("");
       let joinUrl = input.trim();
 
-      // Check if input is a secure invite URL
       if (joinUrl.startsWith("http")) {
         try {
           const url = new URL(joinUrl);
@@ -184,7 +155,6 @@ export default function Dashboard() {
         }
       }
 
-      // Handle direct invite codes and legacy UUIDs
       const res = await fetch(`/api/invite/${joinUrl}`, {
         method: "POST",
       });
@@ -200,18 +170,15 @@ export default function Dashboard() {
       setIsJoinChatroomOpen(false);
       setJoinId("");
       queryClient.invalidateQueries({ queryKey: ["chatrooms"] });
-      // Auto-select the joined chatroom
       if (data.chatroomId) {
         setSelectedChatroomId(data.chatroomId);
       }
     },
   });
 
-  // Add state for initial message history
   const [initialMessages, setInitialMessages] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<StatusNotification[]>([]);
 
-  // Helper function to add notifications
   const addNotification = useCallback(
     (
       notification: Omit<StatusNotification, "id" | "timestamp" | "isVisible">
@@ -224,14 +191,12 @@ export default function Dashboard() {
       };
       setNotifications((prev) => [...prev, newNotification]);
 
-      // Auto-dismiss after 4 seconds
       setTimeout(() => {
         setNotifications((prev) =>
           prev.map((n) =>
             n.id === newNotification.id ? { ...n, isVisible: false } : n
           )
         );
-        // Remove from array after animation completes
         setTimeout(() => {
           setNotifications((prev) =>
             prev.filter((n) => n.id !== newNotification.id)
@@ -277,7 +242,6 @@ export default function Dashboard() {
     },
   });
 
-  // Auto-select first chatroom if none selected
   useEffect(() => {
     if (chatrooms.length > 0 && !selectedChatroomId) {
       setSelectedChatroomId(chatrooms[0].id);
@@ -288,7 +252,6 @@ export default function Dashboard() {
     (room: Chatroom) => room.id === selectedChatroomId
   );
 
-  // Fetch participants for selected chatroom
   const { data: participants = [] } = useQuery({
     queryKey: ["participants", selectedChatroomId],
     queryFn: async () => {
@@ -301,9 +264,7 @@ export default function Dashboard() {
     enabled: !!selectedChatroomId,
   });
 
-  // Check if current user is admin of selected chatroom
   const currentUserParticipant = participants.find((p: any) => {
-    // Try multiple ways to match the current user
     return (
       p.user?.clerkId === user?.id ||
       p.clerkId === user?.id ||
@@ -313,12 +274,9 @@ export default function Dashboard() {
     );
   });
   const isCurrentUserAdmin = currentUserParticipant?.role === "admin";
-
-  // Get current user's database ID for message filtering
   const currentUserDbId =
     currentUserParticipant?.userId || currentUserParticipant?.user?.id;
 
-  // Fetch AI settings for selected chatroom
   const { data: aiSettings, refetch: refetchAiSettings } = useQuery({
     queryKey: ["ai-settings", selectedChatroomId],
     queryFn: async () => {
@@ -331,7 +289,6 @@ export default function Dashboard() {
     enabled: !!selectedChatroomId,
   });
 
-  // Update AI settings mutation
   const updateAiSettingsMutation = useMutation({
     mutationFn: async ({
       chatroomId,
@@ -358,7 +315,6 @@ export default function Dashboard() {
 
   const handleAiModeToggle = () => {
     if (!selectedChatroomId || !aiSettings) return;
-
     const newMode =
       aiSettings.aiMode === "auto-respond" ? "summoned" : "auto-respond";
     updateAiSettingsMutation.mutate({
@@ -369,28 +325,23 @@ export default function Dashboard() {
 
   const handleSaveAiSettings = () => {
     if (!selectedChatroomId) return;
-
     updateAiSettingsMutation.mutate({
       chatroomId: selectedChatroomId,
       settings: { aiSystemMessage },
     });
   };
 
-  // Set initial AI system message when settings load
   useEffect(() => {
     if (aiSettings?.aiSystemMessage) {
       setAiSystemMessage(aiSettings.aiSystemMessage);
     }
   }, [aiSettings]);
 
-  // PartyKit WebSocket connection for real-time updates
   const onMemberEvent = useCallback(
     (event: MemberEventMessage) => {
       queryClient.invalidateQueries({
         queryKey: ["participants", selectedChatroomId],
       });
-
-      // Add notification for member events
       if (event.type === "member-joined") {
         addNotification({
           type: "member-joined",
@@ -412,83 +363,59 @@ export default function Dashboard() {
     (update: SettingsUpdateMessage) => {
       refetchAiSettings();
 
-      // Add notification for settings changes
-      console.log("Settings update received:", update.settings);
-      console.log("Current aiSettings:", aiSettings);
+      // Create simple, clear notification content using updatedFields
+      let content = "";
 
-      // Compare with current settings to determine what actually changed
-      if (aiSettings && update.settings.aiMode !== aiSettings.aiMode) {
-        // AI Mode was changed
-        console.log(
-          "AI Mode changed:",
-          aiSettings.aiMode,
-          "->",
-          update.settings.aiMode
-        );
-        const aiModeText =
+      // Use updatedFields to determine what was actually changed
+      if (update.updatedFields?.aiSystemMessage) {
+        // This was specifically a behavior update
+        content = "AI Behavior updated";
+      } else if (update.updatedFields?.aiMode) {
+        // This was specifically a mode change
+        const modeDisplay =
           update.settings.aiMode === "auto-respond"
-            ? "Auto-respond"
+            ? "Auto Respond"
             : update.settings.aiMode === "summoned"
-            ? "Summoned (@AI only)"
-            : `Unknown mode: ${update.settings.aiMode}`;
-
-        addNotification({
-          type: "settings-update",
-          content: `${update.updatedBy.displayName} changed AI mode to ${aiModeText}`,
-          data: update.settings,
-        });
-      } else if (
-        aiSettings &&
-        update.settings.aiSystemMessage !== aiSettings.aiSystemMessage
-      ) {
-        // System message was changed
-        console.log(
-          "System message changed:",
-          aiSettings.aiSystemMessage,
-          "->",
-          update.settings.aiSystemMessage
-        );
-        addNotification({
-          type: "settings-update",
-          content: `${update.updatedBy.displayName} updated the AI system prompt`,
-          data: update.settings,
-        });
+            ? "Summoned Only"
+            : "Disabled";
+        content = `AI Mode changed to ${modeDisplay}`;
+      } else if (update.updatedFields?.aiEnabled) {
+        // This was specifically an enabled/disabled change
+        content = `AI ${update.settings.aiEnabled ? "enabled" : "disabled"}`;
       } else {
-        // Generic settings change (or first load when aiSettings is null)
-        console.log(
-          "Generic settings change. aiSettings:",
-          aiSettings,
-          "update:",
-          update.settings
-        );
-        addNotification({
-          type: "settings-update",
-          content: `${update.updatedBy.displayName} updated AI settings`,
-          data: update.settings,
-        });
+        // Fallback for unclear updates or multiple changes
+        content = "AI Settings updated";
       }
+
+      // Add user attribution if available
+      if (update.updatedBy?.displayName) {
+        content += ` by ${update.updatedBy.displayName}`;
+      }
+
+      addNotification({
+        type: "settings-update",
+        content,
+        data: update.settings,
+      });
     },
-    [refetchAiSettings, addNotification, aiSettings]
+    [refetchAiSettings, addNotification]
   );
 
   const onMessagesClear = useCallback(
     (event: MessagesClearedEvent) => {
-      // Clear local message state when messages are cleared by admin
       setInitialMessages([]);
       setStreamingMessage(null);
-
-      // Add notification for messages cleared
       addNotification({
         type: "messages-cleared",
-        content: `${event.clearedBy.name} cleared all messages`,
+        content: `Messages cleared by ${event.clearedBy?.name || "Admin"}`,
         data: event.clearedBy,
       });
     },
     [addNotification]
   );
+
   const {
     messages: partyMessages,
-    sendMessage: sendPartyMessage,
     streamingAiMessage: partyStreamingMessage,
     typingUsers,
     sendTypingStart,
@@ -504,69 +431,31 @@ export default function Dashboard() {
     onMessagesClear,
   });
 
-  // Fetch initial message history when chatroom changes
   useEffect(() => {
     if (!selectedChatroomId) return;
     fetch(`/api/chatrooms/${selectedChatroomId}/messages`)
       .then((res) => res.json())
       .then((data) => setInitialMessages(data.messages || []));
-
-    // Clear notifications when switching chatrooms
     setNotifications([]);
   }, [selectedChatroomId]);
 
-  // Merge initial messages with real-time PartyKit messages (avoid duplicates)
-  const mergedMessages = [
-    // Keep ALL initial messages (including optimistic user messages)
-    ...initialMessages.filter(
-      (msg) =>
-        !partyMessages.some((pm: any) => {
-          // Only deduplicate AI messages, not user messages
-          // User messages should be shown optimistically and PartyKit messages filtered out
-          return (
-            pm.id === msg.id ||
-            // For AI messages, match by content (exact match indicates duplicate)
-            (msg.isAiMessage &&
-              pm.isAiMessage &&
-              (pm.text || pm.content) === msg.content)
-            // Remove user message deduplication - let optimistic messages show
-          );
-        })
-    ),
-    // Transform PartyKit messages to match expected format, but exclude current user's messages
-    // since they should be shown optimistically
-    ...partyMessages
-      .filter((pm: any) => pm.userId !== currentUserDbId) // Exclude current user's messages from PartyKit
-      .map((pm: any) => ({
-        ...pm,
-        id: pm.id || `party-${pm.sentAt || pm.receivedAt}-${pm.userId}`,
-        content: pm.content || pm.text,
-        createdAt: pm.createdAt || pm.sentAt || pm.receivedAt,
-        sender: {
-          name: pm.displayName || pm.user,
-          firstName: pm.displayName?.split(" ")[0],
-          lastName: pm.displayName?.split(" ")[1],
-        },
-        isAiMessage: pm.isAiMessage || pm.userId === "ai-assistant",
-      })),
-    // Notifications are now handled separately as toast notifications
-  ];
-
-  // Sort messages by timestamp to ensure proper order
-  const sortedMessages = mergedMessages.sort((a, b) => {
-    const timeA = new Date(
-      a.createdAt || a.sentAt || a.receivedAt || 0
-    ).getTime();
-    const timeB = new Date(
-      b.createdAt || b.sentAt || b.receivedAt || 0
-    ).getTime();
-    return timeA - timeB;
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(
+        `/api/chatrooms/${selectedChatroomId}/messages/new`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        }
+      );
+      if (!res.ok) {
+        throw new Error("Failed to send message");
+      }
+      return res;
+    },
   });
 
-  // No need to refresh messages from database for real-time updates
-  // PartyKit handles real-time messages and we use optimistic updates for user messages
-
-  // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -575,21 +464,17 @@ export default function Dashboard() {
     scrollToBottom();
   }, [partyMessages, streamingMessage, partyStreamingMessage]);
 
-  // Also scroll when new messages are optimistically added
   useEffect(() => {
     const timer = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timer);
   }, [partyMessages.length]);
 
-  // Helper function to handle sending messages
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedChatroomId) return;
     const content = newMessage.trim();
-    console.log("📤 Sending message:", content);
 
-    // Optimistically add user message to local state immediately
     const optimisticMessage = {
-      id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+      id: `temp-${Date.now()}`,
       content: content,
       createdAt: new Date().toISOString(),
       isAiMessage: false,
@@ -604,140 +489,94 @@ export default function Dashboard() {
       userId: currentUserDbId,
     };
 
-    // Add to initial messages for immediate display
     setInitialMessages((prev) => [...prev, optimisticMessage]);
-
     setNewMessage("");
     setStreamingMessage({ content: "", isStreaming: false });
 
     try {
-      const res = await fetch(
-        `/api/chatrooms/${selectedChatroomId}/messages/new`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        }
+      await sendMessageMutation.mutateAsync(content);
+    } catch (error) {
+      setInitialMessages((prev) =>
+        prev.filter((msg) => msg.id !== optimisticMessage.id)
       );
-      console.log(
-        "📡 API Response:",
-        res.status,
-        res.headers.get("content-type")
-      );
-      if (!res.ok) {
-        // Remove optimistic message on error
-        setInitialMessages((prev) =>
-          prev.filter((msg) => msg.id !== optimisticMessage.id)
-        );
-        throw new Error("Failed to send message");
-      }
-
-      // If AI is triggered, handle streaming response
-      if (res.headers.get("content-type")?.includes("text/event-stream")) {
-        console.log("🤖 AI streaming response detected");
-        const reader = res.body?.getReader();
-        const decoder = new TextDecoder();
-        let aiContent = "";
-        if (reader) {
-          setStreamingMessage({ content: "", isStreaming: true });
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  if (data.content) {
-                    aiContent += data.content;
-                    setStreamingMessage({
-                      content: aiContent,
-                      isStreaming: true,
-                    });
-                  }
-                  if (data.complete) {
-                    setStreamingMessage({
-                      content: aiContent,
-                      isStreaming: false,
-                    });
-                  }
-                } catch {}
-              }
-            }
-          }
-        }
-      } else {
-        console.log("✅ Message sent successfully (no AI response)");
-      }
-    } catch (err) {
-      console.error("❌ Error sending message:", err);
-      // Optimistic message was already removed on error above
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Handle typing indicators
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setNewMessage(value);
 
-    // Send typing start if not already typing
-    if (!isTyping && value.trim()) {
+    if (value.length > 0 && !isTyping) {
       setIsTyping(true);
       sendTypingStart();
-    }
-
-    // Reset typing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set timeout to stop typing indicator after 2 seconds of inactivity
-    typingTimeoutRef.current = setTimeout(() => {
-      if (isTyping) {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
         sendTypingStop();
-      }
-    }, 2000);
-
-    // If input is empty, immediately stop typing
-    if (!value.trim() && isTyping) {
+      }, 2000);
+    } else if (value.length === 0 && isTyping) {
       setIsTyping(false);
       sendTypingStop();
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+    } else if (value.length > 0 && isTyping) {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        sendTypingStop();
+      }, 2000);
     }
   };
 
-  // Stop typing when message is sent
-  useEffect(() => {
-    if (!newMessage && isTyping) {
-      setIsTyping(false);
-      sendTypingStop();
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+  const clearMessagesMutation = useMutation({
+    mutationFn: async (chatroomId: string) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/messages`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to clear messages");
       }
-    }
-  }, [newMessage, isTyping, sendTypingStop]);
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsClearMessagesOpen(false);
+      setInitialMessages([]);
+    },
+  });
 
-  // Cleanup typing timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+  const removeMemberMutation = useMutation({
+    mutationFn: async ({
+      chatroomId,
+      memberId,
+    }: {
+      chatroomId: string;
+      memberId: string;
+    }) => {
+      const res = await fetch(`/api/chatrooms/${chatroomId}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to remove member");
       }
-    };
-  }, []);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["participants", selectedChatroomId],
+      });
+      setRemoveMemberDialog({ isOpen: false, member: null });
+    },
+  });
 
-  // Generate invite link mutation
   const generateInviteMutation = useMutation({
     mutationFn: async (chatroomId: string) => {
       const res = await fetch(`/api/chatrooms/${chatroomId}/invite`, {
@@ -761,69 +600,15 @@ export default function Dashboard() {
     generateInviteMutation.mutate(selectedChatroomId);
   };
 
-  // Clear all messages mutation
-  const clearMessagesMutation = useMutation({
-    mutationFn: async (chatroomId: string) => {
-      const res = await fetch(`/api/chatrooms/${chatroomId}/messages`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to clear messages");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      setIsClearMessagesOpen(false);
-      // Clear local message state
-      setInitialMessages([]);
-      // The PartyKit event will handle updating other clients
-    },
-  });
-
-  // Remove member mutation
-  const removeMemberMutation = useMutation({
-    mutationFn: async ({
-      chatroomId,
-      memberId,
-    }: {
-      chatroomId: string;
-      memberId: string;
-    }) => {
-      const res = await fetch(`/api/chatrooms/${chatroomId}/members`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to remove member");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      // Refresh participants list
-      queryClient.invalidateQueries({
-        queryKey: ["participants", selectedChatroomId],
-      });
-      setRemoveMemberDialog({ isOpen: false, member: null });
-    },
-  });
-
   const handleClearMessages = () => {
     if (!selectedChatroomId) return;
     clearMessagesMutation.mutate(selectedChatroomId);
   };
 
-  // Send typing indicator
-  const sendTypingIndicator = () => {
-    // Typing indicator is handled by the usePartySocket hook
-  };
-
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Loading...
+        <div className="text-muted-foreground">Loading</div>
       </div>
     );
   }
@@ -834,840 +619,673 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Loading chatrooms...
+        <div className="text-muted-foreground">Loading</div>
       </div>
     );
   }
   if (isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-red-500">
-        Failed to load chatrooms.
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-destructive">Error loading</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 z-[100] space-y-2">
+    <div className="flex h-screen bg-background">
+      {/* Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`transform transition-all duration-300 ease-in-out ${
-              notification.isVisible
-                ? "translate-x-0 opacity-100"
-                : "translate-x-full opacity-0"
-            }`}
+            className={`
+              transform transition-all duration-300 ease-in-out
+              ${
+                notification.isVisible
+                  ? "translate-x-0 opacity-100"
+                  : "translate-x-full opacity-0"
+              }
+              bg-white border border-neutral-200 rounded-lg shadow-lg p-3 min-w-[280px] max-w-[400px]
+            `}
           >
-            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <span className="text-lg">
-                    {notification.type === "member-joined" && "👋"}
-                    {notification.type === "member-removed" && "👋"}
-                    {notification.type === "settings-update" && "⚙️"}
-                    {notification.type === "messages-cleared" && "🧹"}
-                  </span>
+            <div className="flex items-start gap-3">
+              <div
+                className={`
+                w-2 h-2 rounded-full flex-shrink-0 mt-1.5
+                ${
+                  notification.type === "member-joined"
+                    ? "bg-green-500"
+                    : notification.type === "member-removed"
+                    ? "bg-orange-500"
+                    : notification.type === "settings-update"
+                    ? "bg-blue-500"
+                    : "bg-purple-500"
+                }
+              `}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-neutral-900">
+                  {notification.type === "member-joined"
+                    ? "Member Joined"
+                    : notification.type === "member-removed"
+                    ? "Member Removed"
+                    : notification.type === "settings-update"
+                    ? "Settings Updated"
+                    : "Messages Cleared"}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
-                    {notification.type === "member-joined" && "Member Joined"}
-                    {notification.type === "member-removed" && "Member Removed"}
-                    {notification.type === "settings-update" &&
-                      "Settings Updated"}
-                    {notification.type === "messages-cleared" &&
-                      "Messages Cleared"}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {notification.content}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {new Date(notification.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                <div className="text-xs text-neutral-600 mt-0.5">
+                  {notification.content}
                 </div>
-                <button
-                  onClick={() => {
-                    setNotifications((prev) =>
-                      prev.map((n) =>
-                        n.id === notification.id
-                          ? { ...n, isVisible: false }
-                          : n
-                      )
-                    );
-                    setTimeout(() => {
-                      setNotifications((prev) =>
-                        prev.filter((n) => n.id !== notification.id)
-                      );
-                    }, 300);
-                  }}
-                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
               </div>
+              <button
+                onClick={() => {
+                  setNotifications((prev) =>
+                    prev.map((n) =>
+                      n.id === notification.id ? { ...n, isVisible: false } : n
+                    )
+                  );
+                  setTimeout(() => {
+                    setNotifications((prev) =>
+                      prev.filter((n) => n.id !== notification.id)
+                    );
+                  }, 300);
+                }}
+                className="text-neutral-400 hover:text-neutral-600 flex-shrink-0"
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-purple-600 flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-semibold text-gray-900">
-              AI Playground
-            </span>
-          </div>
-
-          <div className="flex items-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-8 w-8 rounded-full p-0"
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gray-100 text-gray-600 text-sm font-medium">
-                      {user?.firstName && user?.lastName
-                        ? `${user.firstName[0]}${user.lastName[0]}`
-                        : user?.firstName
-                        ? user.firstName[0]
-                        : user?.username
-                        ? user.username.slice(0, 2).toUpperCase()
-                        : user?.emailAddresses?.[0]?.emailAddress
-                        ? user.emailAddresses[0].emailAddress
-                            .slice(0, 2)
-                            .toUpperCase()
-                        : "SS"}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user?.firstName && user?.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user?.firstName
-                        ? user.firstName
-                        : user?.username
-                        ? user.username
-                        : user?.emailAddresses?.[0]?.emailAddress || "User"}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.emailAddresses?.[0]?.emailAddress || ""}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/user/profile")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/" })}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      {/* Sidebar */}
+      <div className="w-48 bg-neutral-50 border-r border-neutral-200 flex flex-col">
+        {/* Header */}
+        <div className="p-2 border-b border-neutral-200">
+          <div className="text-xs font-medium text-neutral-900">CHATROOMS</div>
         </div>
-      </header>
 
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* Left Sidebar - Chatroom Navigation */}
-        <aside className="w-64 bg-white border-r border-gray-100 flex flex-col">
-          <div className="p-4 border-b border-gray-100">
-            <div className="space-y-2">
-              <Dialog
-                open={isCreateChatroomOpen}
-                onOpenChange={setIsCreateChatroomOpen}
+        {/* Chatroom List */}
+        <div className="flex-1 overflow-y-auto">
+          {chatrooms.map((chatroom: Chatroom) => (
+            <div
+              key={chatroom.id}
+              onClick={() => setSelectedChatroomId(chatroom.id)}
+              className={`p-2 cursor-pointer border-b border-neutral-100 ${
+                selectedChatroomId === chatroom.id
+                  ? "bg-green-700 text-white"
+                  : "hover:bg-neutral-100"
+              }`}
+            >
+              <div className="text-xs font-medium truncate">
+                {chatroom.name}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="p-2 border-t border-neutral-200 space-y-1">
+          <button
+            onClick={() => setIsCreateChatroomOpen(true)}
+            className="w-full p-1 text-xs text-white hover:bg-green-800"
+            style={{ backgroundColor: "#15803d" }}
+          >
+            CREATE ROOM
+          </button>
+          <button
+            onClick={() => setIsJoinChatroomOpen(true)}
+            className="w-full p-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+          >
+            JOIN ROOM
+          </button>
+        </div>
+
+        {/* Profile Section */}
+        <div className="p-2 border-t border-neutral-200 relative">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 w-full hover:bg-neutral-100 p-1 rounded">
+                <div className="avatar w-6 h-6 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
+                  {user?.firstName?.[0] || user?.username?.[0] || "U"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-neutral-900 truncate">
+                    {user?.firstName} {user?.lastName}
+                  </div>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-48"
+              side="top"
+              sideOffset={5}
+            >
+              <DropdownMenuItem
+                onClick={() => router.push("/user/profile")}
+                className="cursor-pointer"
               >
-                <DialogTrigger asChild>
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 shadow-sm rounded-none">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Chatroom
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Collaborative Chatroom</DialogTitle>
-                    <DialogDescription>
-                      Start a new AI-powered collaborative chatroom with your
-                      team.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Chatroom Title
-                      </label>
-                      <Input
-                        placeholder="Enter chatroom title..."
-                        value={newChatroomName}
-                        onChange={(e) => setNewChatroomName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsCreateChatroomOpen(false)}
-                      className="font-semibold px-6 py-2 rounded-none"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => createChatroom.mutate(newChatroomName)}
-                      className="font-semibold px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-none"
-                    >
-                      Create Chatroom
-                    </Button>
-                  </div>
-                  {createError && (
-                    <p className="text-red-500 text-sm mt-2">{createError}</p>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              <Dialog
-                open={isJoinChatroomOpen}
-                onOpenChange={setIsJoinChatroomOpen}
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => signOut(() => router.push("/"))}
+                className="cursor-pointer"
               >
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full border-gray-200 hover:bg-gray-50 font-medium py-2.5 rounded-none"
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {selectedChatroom ? (
+          <>
+            {/* Chat Header */}
+            <div className="p-2 border-b border-neutral-200">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-medium text-neutral-900">
+                  {selectedChatroom.name}
+                </div>
+                {isCurrentUserAdmin && (
+                  <button
+                    onClick={handleShareInvite}
+                    className="px-2 py-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
                   >
-                    <Users className="w-4 h-4 mr-2" />
-                    Join Chatroom
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Join Collaborative Chatroom</DialogTitle>
-                    <DialogDescription>
-                      Enter a chatroom ID or invitation link to join an existing
-                      chatroom.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Invitation Link or Code
-                      </label>
-                      <Input
-                        placeholder="e.g., https://app.com/invite/abc123 or abc123"
-                        value={joinId}
-                        onChange={(e) => setJoinId(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsJoinChatroomOpen(false)}
-                      className="font-semibold px-6 py-2 rounded-none"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => joinChatroom.mutate(joinId)}
-                      className="font-semibold px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-none"
-                    >
-                      Join Chatroom
-                    </Button>
-                  </div>
-                  {joinError && (
-                    <p className="text-red-500 text-sm mt-2">{joinError}</p>
-                  )}
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {/* Chatroom List */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-2">
-              {chatrooms.map((chatroom: Chatroom) => (
-                <button
-                  key={chatroom.id}
-                  onClick={() => setSelectedChatroomId(chatroom.id)}
-                  className={`w-full text-left p-3 hover:bg-gray-50 border-l-2 transition-colors ${
-                    selectedChatroomId === chatroom.id
-                      ? "bg-purple-50 border-purple-600"
-                      : "border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Hash className="w-4 h-4 text-gray-400" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {chatroom.name}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* Center Container - Chatroom Content */}
-        <main className="flex-1 flex flex-col">
-          {selectedChatroom ? (
-            <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-100 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-lg font-semibold text-gray-900">
-                      {selectedChatroom.name}
-                    </h1>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {isCurrentUserAdmin && (
-                      <Dialog
-                        open={isClearMessagesOpen}
-                        onOpenChange={setIsClearMessagesOpen}
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-none text-red-600 border-red-200 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Clear Messages
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Clear All Messages</DialogTitle>
-                            <DialogDescription>
-                              This will permanently delete all messages in this
-                              chatroom for all participants. This action cannot
-                              be undone.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="flex justify-end space-x-2 pt-4">
-                            <Button
-                              variant="outline"
-                              onClick={() => setIsClearMessagesOpen(false)}
-                              className="rounded-none"
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={handleClearMessages}
-                              disabled={clearMessagesMutation.isPending}
-                              className="bg-red-600 hover:bg-red-700 text-white rounded-none"
-                            >
-                              {clearMessagesMutation.isPending
-                                ? "Clearing..."
-                                : "Clear All Messages"}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleShareInvite}
-                      disabled={generateInviteMutation.isPending}
-                      className={cn(
-                        "rounded-none transition-colors",
-                        linkCopied &&
-                          "bg-green-50 border-green-200 text-green-700"
-                      )}
-                    >
-                      {linkCopied ? (
-                        <>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Link Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="w-4 h-4 mr-2" />
-                          Share Invite Link
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="flex-1 bg-white p-4 overflow-y-auto">
-                <div className="space-y-4">
-                  {sortedMessages.length > 0 ? (
-                    <>
-                      {sortedMessages.map((message: any, idx: number) => {
-                        // Use the first available timestamp for display
-                        const timestamp =
-                          message.createdAt ||
-                          message.sentAt ||
-                          message.receivedAt;
-
-                        return (
-                          <div
-                            key={
-                              message.id ||
-                              message._id ||
-                              message.createdAt ||
-                              `msg-idx-${idx}`
-                            }
-                            className="flex items-start space-x-3"
-                          >
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback
-                                className={`text-sm font-medium ${
-                                  message.isAiMessage
-                                    ? "bg-purple-100 text-purple-600"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {message.isAiMessage
-                                  ? "AI"
-                                  : message.sender?.firstName &&
-                                    message.sender?.lastName
-                                  ? `${message.sender.firstName[0]}${message.sender.lastName[0]}`
-                                  : message.sender?.firstName
-                                  ? message.sender.firstName[0]
-                                  : message.sender?.name
-                                  ? message.sender.name
-                                      .slice(0, 2)
-                                      .toUpperCase()
-                                  : "U"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {message.isAiMessage
-                                    ? "AI Assistant"
-                                    : message.sender?.name ||
-                                      message.displayName ||
-                                      message.user ||
-                                      "User"}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {timestamp
-                                    ? new Date(timestamp).toLocaleTimeString(
-                                        [],
-                                        {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        }
-                                      )
-                                    : ""}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-700 mt-1 prose prose-sm max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {message.content || message.text}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {(partyStreamingMessage?.isActive ||
-                        streamingMessage?.isStreaming) &&
-                        (partyStreamingMessage?.content ||
-                          streamingMessage?.content) &&
-                        // Don't show streaming message if there's already a complete AI message with same content
-                        !sortedMessages.some(
-                          (msg) =>
-                            msg.isAiMessage &&
-                            (msg.content === partyStreamingMessage?.content ||
-                              msg.content === streamingMessage?.content)
-                        ) && (
-                          <div
-                            key={`ai-streaming-${selectedChatroomId}-unique`}
-                            className="flex items-start space-x-3"
-                          >
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-purple-100 text-purple-600 text-sm font-medium">
-                                AI
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-gray-900">
-                                  AI Assistant
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date().toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                                <span className="text-xs text-blue-500 font-medium">
-                                  Typing...
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-700 mt-1 prose prose-sm max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {partyStreamingMessage?.content ||
-                                    streamingMessage?.content ||
-                                    ""}
-                                </ReactMarkdown>
-                                <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">
-                        No messages yet. Start the conversation!
-                      </p>
-                    </div>
-                  )}
-                  {/* Invisible element to scroll to */}
-                  <div ref={messagesEndRef} />
-                </div>
-              </div>
-
-              {/* Message Input */}
-              <div className="bg-white border-t border-gray-100 p-4">
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-none"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Typing Indicator - Fixed height to prevent layout shift */}
-                <div className="h-6 flex items-center">
-                  {typingUsers.size > 0 && (
-                    <div className="text-xs text-gray-500 mt-2 animate-pulse">
-                      {(() => {
-                        const displayNames = Array.from(typingUsers.values());
-                        if (displayNames.length === 1) {
-                          return `${displayNames[0]} is typing...`;
-                        } else if (displayNames.length === 2) {
-                          return `${displayNames[0]} and ${displayNames[1]} are typing...`;
-                        } else {
-                          return `${displayNames
-                            .slice(0, -1)
-                            .join(", ")} and ${displayNames.slice(
-                            -1
-                          )} are typing...`;
-                        }
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-white">
-              <div className="text-center">
-                <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Select a chatroom
-                </h3>
-                <p className="text-gray-500">
-                  Choose a chatroom from the sidebar to start chatting
-                </p>
+                    {linkCopied ? "COPIED" : "SHARE INVITE"}
+                  </button>
+                )}
               </div>
             </div>
-          )}
-        </main>
 
-        {/* Right Sidebar - Participants & AI Settings - Only show when chatrooms exist */}
-        {chatrooms.length > 0 && (
-          <aside className="w-80 bg-white border-l border-gray-100 flex flex-col">
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Participants
-              </h2>
-            </div>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {(() => {
+                const allMessages = [
+                  ...initialMessages,
+                  ...partyMessages.filter(
+                    (msg) =>
+                      !initialMessages.some((im: any) => {
+                        // Check for exact content and timestamp match to prevent duplicates
+                        const contentMatch =
+                          (im.content || im.text) === msg.text;
+                        const timeMatch =
+                          Math.abs(
+                            new Date(im.createdAt || im.sentAt || 0).getTime() -
+                              new Date(msg.sentAt || 0).getTime()
+                          ) < 5000; // Within 5 seconds
+                        return contentMatch && timeMatch;
+                      })
+                  ),
+                ];
+                const sortedMessages = allMessages.sort(
+                  (a, b) =>
+                    new Date(a.createdAt || a.sentAt || 0).getTime() -
+                    new Date(b.createdAt || b.sentAt || 0).getTime()
+                );
 
-            <div className="p-4 space-y-3">
-              {/* Participants List */}
-              {participants.length > 0 ? (
-                participants.map((participant: any) => {
-                  const isCurrentUser =
-                    participant.user?.clerkId === user?.id ||
-                    participant.clerkId === user?.id ||
-                    participant.userId === user?.id ||
-                    (participant.user?.firstName === user?.firstName &&
-                      participant.user?.lastName === user?.lastName);
-
-                  const participantName =
-                    participant.user?.firstName && participant.user?.lastName
-                      ? `${participant.user.firstName} ${participant.user.lastName}`
-                      : participant.user?.firstName
-                      ? participant.user.firstName
-                      : participant.firstName && participant.lastName
-                      ? `${participant.firstName} ${participant.lastName}`
-                      : participant.firstName || "User";
-
+                if (sortedMessages.length === 0) {
                   return (
-                    <div
-                      key={participant.id || participant.userId}
-                      className="flex items-center space-x-3 group"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-gray-100 text-gray-600 text-sm font-medium">
-                          {participant.user?.firstName &&
-                          participant.user?.lastName
-                            ? `${participant.user.firstName[0]}${participant.user.lastName[0]}`
-                            : participant.user?.firstName
-                            ? participant.user.firstName[0]
-                            : participant.firstName && participant.lastName
-                            ? `${participant.firstName[0]}${participant.lastName[0]}`
-                            : participant.firstName
-                            ? participant.firstName[0]
-                            : "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {participantName}
-                          {isCurrentUser && (
-                            <span className="text-xs text-gray-500 ml-1">
-                              (You)
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {participant.role === "admin" ? "Admin" : "Member"}
-                        </p>
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-neutral-500 text-xs">
+                        No messages
                       </div>
-
-                      {/* Remove button - only show for admins and not for current user */}
-                      {isCurrentUserAdmin && !isCurrentUser && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-1 h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() =>
-                            setRemoveMemberDialog({
-                              isOpen: true,
-                              member: {
-                                ...participant,
-                                name: participantName,
-                                userId:
-                                  participant.user?.id || participant.userId,
-                              },
-                            })
-                          }
-                          title="Remove member"
-                        >
-                          <UserX className="h-3 w-3" />
-                        </Button>
-                      )}
                     </div>
                   );
-                })
-              ) : (
-                <div className="text-center py-4">
-                  <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Loading participants...
-                  </p>
-                </div>
-              )}
-            </div>
+                }
 
-            <div className="p-4 border-t border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                AI Settings
-              </h3>
-              <div className="space-y-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start rounded-none"
-                      disabled={updateAiSettingsMutation.isPending}
-                    >
-                      <Brain className="w-4 h-4 mr-2" />
-                      AI Mode:{" "}
-                      {aiSettings?.aiMode === "auto-respond"
-                        ? "Auto-respond"
-                        : "Summoned (@AI only)"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56">
-                    <DropdownMenuLabel>Select AI Mode</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (!selectedChatroomId || !aiSettings) return;
-                        updateAiSettingsMutation.mutate({
-                          chatroomId: selectedChatroomId,
-                          settings: { aiMode: "auto-respond" },
-                        });
-                      }}
-                    >
-                      <Brain className="w-4 h-4 mr-2" />
-                      Auto-respond Mode
-                      <p className="text-xs text-gray-500 mt-1">
-                        AI responds to all messages automatically
-                      </p>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (!selectedChatroomId || !aiSettings) return;
-                        updateAiSettingsMutation.mutate({
-                          chatroomId: selectedChatroomId,
-                          settings: { aiMode: "summoned" },
-                        });
-                      }}
-                    >
-                      <Brain className="w-4 h-4 mr-2" />
-                      Summoned Mode
-                      <p className="text-xs text-gray-500 mt-1">
-                        AI only responds when mentioned with @AI
-                      </p>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                return sortedMessages.map((message, index) => {
+                  const isAi = message.isAiMessage;
+                  const isCurrentUser =
+                    !isAi &&
+                    (message.userId === currentUserDbId ||
+                      message.sender?.id === currentUserDbId);
 
-                <Dialog
-                  open={isAiSettingsOpen}
-                  onOpenChange={setIsAiSettingsOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start rounded-none"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Change AI Behavior
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Configure AI Assistant</DialogTitle>
-                      <DialogDescription>
-                        Customize how the AI assistant behaves in this chatroom.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          System Message
-                        </label>
-                        <Textarea
-                          placeholder="Enter custom instructions for the AI..."
-                          value={aiSystemMessage}
-                          onChange={(e) => setAiSystemMessage(e.target.value)}
-                          rows={5}
-                          className="resize-none"
-                        />
-                        <p className="text-xs text-gray-500">
-                          This message defines the AI's personality and behavior
-                          in this chatroom.
-                        </p>
+                  const userName = isAi
+                    ? "AI"
+                    : message.sender?.name ||
+                      message.sender?.firstName ||
+                      message.user ||
+                      message.displayName ||
+                      (user?.firstName && user?.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : user?.firstName || user?.username || "Unknown User");
+
+                  return (
+                    <div key={`${message.id}-${index}`} className="flex gap-2">
+                      <div
+                        className={`avatar w-6 h-6 flex items-center justify-center text-xs text-white font-medium flex-shrink-0 ${
+                          isAi ? "bg-green-700" : "bg-neutral-400"
+                        }`}
+                      >
+                        {isAi ? "AI" : userName[0]?.toUpperCase() || "U"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xs font-medium text-neutral-900">
+                            {userName}
+                          </span>
+                          <span className="text-xs text-neutral-500">
+                            {new Date(
+                              message.createdAt || message.sentAt || Date.now()
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <div className="text-xs text-neutral-700 break-words">
+                          {isAi ? (
+                            <div className="prose prose-xs max-w-none text-xs">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {message.content || message.text}
+                              </ReactMarkdown>
+                            </div>
+                          ) : (
+                            message.content || message.text
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsAiSettingsOpen(false)}
-                        className="rounded-none"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSaveAiSettings}
-                        disabled={updateAiSettingsMutation.isPending}
-                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-none"
-                      >
-                        Save Settings
-                      </Button>
+                  );
+                });
+              })()}
+
+              {partyStreamingMessage?.isActive && (
+                <div className="flex gap-2">
+                  <div className="avatar w-6 h-6 bg-green-700 flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
+                    AI
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xs font-medium text-neutral-900">
+                        AI
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        {partyStreamingMessage.content
+                          ? "responding..."
+                          : "thinking..."}
+                      </span>
                     </div>
-                  </DialogContent>
-                </Dialog>
+                    {partyStreamingMessage.content && (
+                      <div className="text-xs text-neutral-700 break-words">
+                        <div className="prose prose-xs max-w-none text-xs">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {partyStreamingMessage.content}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="p-2 border-t border-neutral-200">
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={handleInputChange}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  className="flex-1 p-1 text-xs border border-neutral-200 focus:border-green-700 outline-none"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim()}
+                  className="px-2 py-1 text-xs bg-green-700 text-white hover:bg-green-800 disabled:bg-neutral-200 disabled:text-neutral-500"
+                >
+                  SEND
+                </button>
               </div>
             </div>
-          </aside>
-        )}
-
-        {/* Remove Member Confirmation Dialog */}
-        <Dialog
-          open={removeMemberDialog.isOpen}
-          onOpenChange={(open) =>
-            setRemoveMemberDialog({ isOpen: open, member: null })
-          }
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Remove Member</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to remove{" "}
-                {removeMemberDialog.member?.name} from this chatroom? This
-                action cannot be undone and they will lose access to all
-                messages and files in this chatroom.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setRemoveMemberDialog({ isOpen: false, member: null })
-                }
-                className="rounded-none"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (removeMemberDialog.member && selectedChatroomId) {
-                    removeMemberMutation.mutate({
-                      chatroomId: selectedChatroomId,
-                      memberId: removeMemberDialog.member.userId,
-                    });
-                  }
-                }}
-                disabled={removeMemberMutation.isPending}
-                className="bg-red-600 hover:bg-red-700 text-white rounded-none"
-              >
-                {removeMemberMutation.isPending
-                  ? "Removing..."
-                  : "Remove Member"}
-              </Button>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-xs text-neutral-500">
+              Select a chatroom to start messaging
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
       </div>
+
+      {/* Right Sidebar */}
+      {selectedChatroom && (
+        <div className="w-48 bg-neutral-50 border-l border-neutral-200 flex flex-col">
+          {/* Members Section */}
+          <div className="p-2 border-b border-neutral-200">
+            <div className="text-xs font-medium text-neutral-900">
+              MEMBERS ({participants.length})
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {(() => {
+              const admins = participants.filter(
+                (p: any) => p.role === "admin"
+              );
+              const members = participants.filter(
+                (p: any) => p.role !== "admin"
+              );
+
+              return (
+                <>
+                  {admins.length > 0 && (
+                    <>
+                      <div className="text-xs font-medium text-neutral-500 px-1 pt-1">
+                        ADMINS ({admins.length})
+                      </div>
+                      {admins.map((participant: any) => (
+                        <div
+                          key={participant.userId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="avatar w-4 h-4 bg-green-700 flex items-center justify-center text-xs text-white font-medium">
+                              {participant.user?.firstName?.[0] || "U"}
+                            </div>
+                            <div className="text-xs text-neutral-700 truncate">
+                              {participant.user?.firstName}{" "}
+                              {participant.user?.lastName}
+                            </div>
+                          </div>
+                          {isCurrentUserAdmin &&
+                            participant.userId !== currentUserDbId && (
+                              <button
+                                className="text-neutral-500 hover:text-red-600"
+                                onClick={() =>
+                                  setRemoveMemberDialog({
+                                    isOpen: true,
+                                    member: {
+                                      ...participant,
+                                      name: `${participant.user?.firstName} ${participant.user?.lastName}`,
+                                    },
+                                  })
+                                }
+                              >
+                                <UserX className="h-3 w-3" />
+                              </button>
+                            )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {members.length > 0 && (
+                    <>
+                      {admins.length > 0 && (
+                        <div className="border-t border-neutral-200 my-2" />
+                      )}
+                      <div className="text-xs font-medium text-neutral-500 px-1 pt-1">
+                        MEMBERS ({members.length})
+                      </div>
+                      {members.map((participant: any) => (
+                        <div
+                          key={participant.userId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
+                              {participant.user?.firstName?.[0] || "U"}
+                            </div>
+                            <div className="text-xs text-neutral-700 truncate">
+                              {participant.user?.firstName}{" "}
+                              {participant.user?.lastName}
+                            </div>
+                          </div>
+                          {isCurrentUserAdmin &&
+                            participant.userId !== currentUserDbId && (
+                              <button
+                                className="text-neutral-500 hover:text-red-600"
+                                onClick={() =>
+                                  setRemoveMemberDialog({
+                                    isOpen: true,
+                                    member: {
+                                      ...participant,
+                                      name: `${participant.user?.firstName} ${participant.user?.lastName}`,
+                                    },
+                                  })
+                                }
+                              >
+                                <UserX className="h-3 w-3" />
+                              </button>
+                            )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          {/* AI Settings Section */}
+          <div className="border-t border-neutral-200">
+            <div className="p-2 border-b border-neutral-200">
+              <div className="text-xs font-medium text-neutral-900">
+                AI SETTINGS
+              </div>
+            </div>
+            <div className="p-2 space-y-2">
+              <div>
+                <label className="text-xs text-neutral-600 block mb-1">
+                  AI Mode
+                </label>
+                <select
+                  value={
+                    aiSettings?.aiEnabled === false
+                      ? "disabled"
+                      : aiSettings?.aiMode || "auto-respond"
+                  }
+                  onChange={(e) => {
+                    if (!selectedChatroomId) return;
+                    updateAiSettingsMutation.mutate({
+                      chatroomId: selectedChatroomId,
+                      settings: { aiMode: e.target.value },
+                    });
+                  }}
+                  className="w-full p-1 text-xs border border-neutral-200 focus:border-green-700 outline-none"
+                >
+                  <option value="auto-respond">Auto Respond</option>
+                  <option value="summoned">Summoned Only</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <button
+                onClick={() => setIsAiSettingsOpen(true)}
+                className="w-full p-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+              >
+                CHANGE AI BEHAVIOR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <Modal
+        isOpen={isCreateChatroomOpen}
+        onClose={() => setIsCreateChatroomOpen(false)}
+        title="Create New Room"
+        size="sm"
+      >
+        <input
+          type="text"
+          placeholder="Room name"
+          value={newChatroomName}
+          onChange={(e) => setNewChatroomName(e.target.value)}
+          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none rounded"
+        />
+        {createError && (
+          <div className="text-red-600 text-xs mt-2">{createError}</div>
+        )}
+        <ModalFooter>
+          <ModalButton
+            onClick={() => setIsCreateChatroomOpen(false)}
+            variant="secondary"
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton
+            onClick={() => createChatroom.mutate(newChatroomName)}
+            disabled={!newChatroomName.trim()}
+            variant="primary"
+          >
+            Create
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+
+      {/* Join Chatroom Modal */}
+      <Modal
+        isOpen={isJoinChatroomOpen}
+        onClose={() => setIsJoinChatroomOpen(false)}
+        title="Join Room"
+        size="sm"
+      >
+        <input
+          type="text"
+          placeholder="Invitation link or code"
+          value={joinId}
+          onChange={(e) => setJoinId(e.target.value)}
+          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none rounded"
+        />
+        {joinError && (
+          <div className="text-red-600 text-xs mt-2">{joinError}</div>
+        )}
+        <ModalFooter>
+          <ModalButton
+            onClick={() => setIsJoinChatroomOpen(false)}
+            variant="secondary"
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton
+            onClick={() => joinChatroom.mutate(joinId)}
+            disabled={!joinId.trim()}
+            variant="primary"
+          >
+            Join
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+
+      {/* Clear Messages Modal */}
+      <Modal
+        isOpen={isClearMessagesOpen}
+        onClose={() => setIsClearMessagesOpen(false)}
+        title="Clear Messages"
+        size="sm"
+      >
+        <div className="text-xs text-neutral-600">
+          This will delete all messages permanently.
+        </div>
+        <ModalFooter>
+          <ModalButton
+            onClick={() => setIsClearMessagesOpen(false)}
+            variant="secondary"
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton
+            onClick={handleClearMessages}
+            disabled={clearMessagesMutation.isPending}
+            variant="danger"
+          >
+            {clearMessagesMutation.isPending ? "Clearing..." : "Clear"}
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+
+      {/* Remove Member Modal */}
+      <Modal
+        isOpen={removeMemberDialog.isOpen}
+        onClose={() => setRemoveMemberDialog({ isOpen: false, member: null })}
+        title="Remove Member"
+        size="sm"
+      >
+        <div className="text-xs text-neutral-600">
+          Are you sure you want to remove{" "}
+          <strong>{removeMemberDialog.member?.name}</strong> from this chatroom?
+        </div>
+        <ModalFooter>
+          <ModalButton
+            onClick={() =>
+              setRemoveMemberDialog({ isOpen: false, member: null })
+            }
+            variant="secondary"
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton
+            onClick={() => {
+              if (removeMemberDialog.member && selectedChatroomId) {
+                removeMemberMutation.mutate({
+                  chatroomId: selectedChatroomId,
+                  memberId: removeMemberDialog.member.userId,
+                });
+              }
+            }}
+            variant="primary"
+            disabled={removeMemberMutation.isPending}
+          >
+            {removeMemberMutation.isPending ? "Removing..." : "Remove"}
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+
+      {/* AI Settings Modal */}
+      <Modal
+        isOpen={isAiSettingsOpen}
+        onClose={() => setIsAiSettingsOpen(false)}
+        title="Change AI Behavior"
+        size="lg"
+      >
+        <textarea
+          placeholder="AI instructions"
+          value={aiSystemMessage}
+          onChange={(e) => setAiSystemMessage(e.target.value)}
+          rows={6}
+          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none resize-none rounded"
+        />
+        <ModalFooter>
+          <ModalButton
+            onClick={() => setIsAiSettingsOpen(false)}
+            variant="secondary"
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton onClick={handleSaveAiSettings} variant="primary">
+            Save
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

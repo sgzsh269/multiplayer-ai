@@ -60,9 +60,12 @@ export async function PATCH(
   const { aiMode, aiEnabled, aiSystemMessage } = await req.json();
 
   // Validate aiMode
-  if (aiMode && !["auto-respond", "summoned"].includes(aiMode)) {
+  if (aiMode && !["auto-respond", "summoned", "disabled"].includes(aiMode)) {
     return NextResponse.json(
-      { error: "Invalid AI mode. Must be 'auto-respond' or 'summoned'" },
+      {
+        error:
+          "Invalid AI mode. Must be 'auto-respond', 'summoned', or 'disabled'",
+      },
       { status: 400 }
     );
   }
@@ -102,7 +105,16 @@ export async function PATCH(
 
     // Update chatroom settings
     const updateData: any = {};
-    if (aiMode !== undefined) updateData.aiMode = aiMode;
+    if (aiMode !== undefined) {
+      if (aiMode === "disabled") {
+        // Handle disabled mode by setting aiEnabled to false and aiMode to a valid value
+        updateData.aiEnabled = false;
+        updateData.aiMode = "auto-respond"; // Keep a valid mode for when re-enabled
+      } else {
+        updateData.aiMode = aiMode;
+        updateData.aiEnabled = true; // Enable AI when setting a valid mode
+      }
+    }
     if (aiEnabled !== undefined) updateData.aiEnabled = aiEnabled;
     if (aiSystemMessage !== undefined)
       updateData.aiSystemMessage = aiSystemMessage;
@@ -131,6 +143,12 @@ export async function PATCH(
         console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
         // Continue without broadcasting but log the error
       } else {
+        // Determine what was actually updated for better notifications
+        const updatedFields: any = {};
+        if (aiMode !== undefined) updatedFields.aiMode = true;
+        if (aiEnabled !== undefined) updatedFields.aiEnabled = true;
+        if (aiSystemMessage !== undefined) updatedFields.aiSystemMessage = true;
+
         await fetch(
           `${process.env.NEXT_PUBLIC_PARTYKIT_HOST}/parties/main/${chatroomId}/settings-update`,
           {
@@ -141,6 +159,7 @@ export async function PATCH(
             },
             body: JSON.stringify({
               settings: updatedChatroom[0],
+              updatedFields, // Add information about what was actually updated
               chatroomId: chatroomId,
               timestamp: Date.now(),
               updatedBy: {

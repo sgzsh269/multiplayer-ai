@@ -1,149 +1,254 @@
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
-
 @import "tailwindcss";
 
-:root {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --foreground-rgb: 30, 41, 59;
-  --background-start-rgb: 248, 250, 252;
-  --background-end-rgb: 248, 250, 252;
-  --radius: 0.75rem;
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --primary: #3b5fff;
-  --primary-foreground: #ffffff;
-  --secondary: #64748b;
-  --secondary-foreground: #ffffff;
-  --muted: #e2e8f0;
-  --muted-foreground: #64748b;
-  --accent: #5eead4;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b5fff;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1e293b;
-  --sidebar-primary: #3b5fff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #5eead4;
-  --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #3b5fff;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer theme {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --background: #fafafa;
+    --foreground: #171717;
+    --card: #ffffff;
+    --card-foreground: #171717;
+    --popover: #ffffff;
+    --popover-foreground: #171717;
+    --primary: #15803d;
+    --primary-foreground: #ffffff;
+    --secondary: #f5f5f5;
+    --secondary-foreground: #171717;
+    --muted: #f5f5f5;
+    --muted-foreground: #737373;
+    --accent: #e5e5e5;
+    --accent-foreground: #171717;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e5e5e5;
+    --input: #ffffff;
+    --ring: #15803d;
+    --radius: 0rem;
   }
-}
 
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  .dark {
+    --background: #171717;
+    --foreground: #fafafa;
+    --card: #262626;
+    --card-foreground: #fafafa;
+    --popover: #262626;
+    --popover-foreground: #fafafa;
+    --primary: #15803d;
+    --primary-foreground: #ffffff;
+    --secondary: #404040;
+    --secondary-foreground: #fafafa;
+    --muted: #404040;
+    --muted-foreground: #a3a3a3;
+    --accent: #404040;
+    --accent-foreground: #fafafa;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: #404040;
+    --input: #404040;
+    --ring: #15803d;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
+
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    background-color: var(--background);
+    color: var(--foreground);
+    font-size: 13px;
+    line-height: 1.4;
+    font-family: ui-sans-serif, system-ui, sans-serif;
   }
 }
 
-/* Custom typing indicator animations */
-@layer components {
-  .typing-dot-1 {
-    animation-delay: 0s;
-  }
+/* Avatar styles - exception to no border radius rule */
+.avatar {
+  border-radius: 50% !important;
+}
 
-  .typing-dot-2 {
-    animation-delay: 0.1s;
-  }
+/* Custom modal overlay */
+[data-overlay] {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
 
-  .typing-dot-3 {
-    animation-delay: 0.2s;
-  }
+/* Custom modal content */
+[data-content] {
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Remove all animations and transitions */
+*,
+*::before,
+*::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Minimal focus styles */
+*:focus {
+  outline: 1px solid var(--primary) !important;
+  outline-offset: 0px !important;
+}
+
+/* Clean button styles */
+button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Clean input styles */
+input,
+textarea,
+select {
+  border: 1px solid var(--border);
+  background: var(--input);
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 1px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+/* Dropdown menu styles */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+[data-slot="dropdown-menu-content"] {
+  background-color: #fafafa !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  padding: 4px !important;
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+[data-slot="dropdown-menu-item"] {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+[data-slot="dropdown-menu-item"]:hover {
+  background-color: var(--accent) !important;
+}
+
+[data-slot="dropdown-menu-separator"] {
+  height: 1px !important;
+  background-color: var(--border) !important;
+  margin: 4px 0 !important;
+}
+
+/* Ensure dropdown menu trigger has proper positioning context */
+[data-slot="dropdown-menu-trigger"] {
+  position: relative !important;
+}
+
+/* Force dropdown menu to be visible and properly positioned */
+[data-slot="dropdown-menu-content"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Force dropdown menu to appear above profile button */
+[data-slot="dropdown-menu-content"][data-side="top"] {
+  position: fixed !important;
+  bottom: auto !important;
+  top: auto !important;
+  transform: translateY(-100%) !important;
+}
+
+/* Ensure profile section dropdown appears in correct position */
+.p-2.border-t.border-neutral-200.relative [data-slot="dropdown-menu-content"] {
+  position: absolute !important;
+  bottom: 100% !important;
+  right: 0 !important;
+  top: auto !important;
+  left: auto !important;
+  transform: translateY(-5px) !important;
+}
+
+/* Modal button overrides - higher specificity than global button reset */
+.modal-button {
+  border: 0 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  border-radius: 4px !important; /* Override the global border-radius: 0 */
+}
+
+/* Use specific selectors with !important only where needed to override global resets */
+.modal-button.modal-button--primary {
+  background-color: #15803d !important;
+  color: #ffffff !important;
+}
+
+.modal-button.modal-button--primary:hover:not(:disabled) {
+  background-color: #166534 !important;
+}
+
+.modal-button.modal-button--primary:disabled {
+  opacity: 0.5 !important;
+}
+
+.modal-button.modal-button--secondary {
+  background-color: #e5e5e5 !important;
+  color: #171717 !important;
+}
+
+.modal-button.modal-button--secondary:hover:not(:disabled) {
+  background-color: #d4d4d4 !important;
+}
+
+.modal-button.modal-button--secondary:disabled {
+  opacity: 0.5 !important;
+}
+
+.modal-button.modal-button--danger {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.modal-button.modal-button--danger:hover:not(:disabled) {
+  background-color: #dc2626 !important;
+}
+
+.modal-button.modal-button--danger:disabled {
+  opacity: 0.5 !important;
 }
