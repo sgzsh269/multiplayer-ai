@@ -965,6 +965,46 @@ export default function Dashboard() {
                   SEND
                 </button>
               </div>
+
+              {/* Typing Indicator - Fixed height area below input */}
+              <div className="h-6 flex items-center">
+                {typingUsers.size > 0 && (
+                  <div className="flex gap-2 items-center px-1">
+                    <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-neutral-600">
+                        {Array.from(typingUsers.values()).length === 1
+                          ? `${Array.from(typingUsers.values())[0]} is typing`
+                          : Array.from(typingUsers.values()).length === 2
+                          ? `${Array.from(typingUsers.values())[0]} and ${
+                              Array.from(typingUsers.values())[1]
+                            } are typing`
+                          : `${Array.from(typingUsers.values())
+                              .slice(0, -1)
+                              .join(", ")} and ${
+                              Array.from(typingUsers.values()).slice(-1)[0]
+                            } are typing`}
+                      </span>
+                      <div className="flex gap-0.5 ml-1">
+                        <div
+                          className="w-1 h-1 bg-neutral-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <div
+                          className="w-1 h-1 bg-neutral-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <div
+                          className="w-1 h-1 bg-neutral-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         ) : (
