@@ -40,12 +40,24 @@ export async function GET(
         )
       );
 
+    console.log(
+      `🔍 Messages API - Checking membership for user ${user[0].id} in chatroom ${chatroomId}`
+    );
+    console.log(`🔍 Messages API - Found ${membership.length} memberships`);
+
     if (membership.length === 0) {
+      console.log(
+        `❌ Messages API - User ${user[0].id} is NOT a member of chatroom ${chatroomId}`
+      );
       return NextResponse.json(
         { error: "Forbidden: Not a member of this chatroom" },
         { status: 403 }
       );
     }
+
+    console.log(
+      `✅ Messages API - User ${user[0].id} is confirmed member of chatroom ${chatroomId}`
+    );
 
     const chatMessages = await db
       .select({

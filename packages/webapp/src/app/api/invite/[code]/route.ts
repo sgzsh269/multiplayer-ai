@@ -95,29 +95,68 @@ export async function POST(
       }
     }
 
-    // Add user to chatroom
-    await db.insert(chatroom_members).values({
-      userId: user[0].id,
-      chatroomId: invite[0].chatroomId,
-      role: "member",
-    });
-
-    // Update invite usage tracking
-    const currentUsedBy = invite[0].usedBy || [];
-    if (!currentUsedBy.includes(user[0].id)) {
-      await db
-        .update(chatroom_invites)
-        .set({
-          usedBy: [...currentUsedBy, user[0].id],
+    // Add user to chatroom with transaction for data consistency
+    const membershipResult = await db.transaction(async (tx) => {
+      // Add user to chatroom
+      const newMembership = await tx
+        .insert(chatroom_members)
+        .values({
+          userId: user[0].id,
+          chatroomId: invite[0].chatroomId,
+          role: "member",
         })
-        .where(eq(chatroom_invites.id, invite[0].id));
-    }
+        .returning();
+
+      console.log(
+        `✅ User ${user[0].id} successfully added to chatroom ${invite[0].chatroomId} as member`
+      );
+
+      // Verify membership was created successfully within the transaction
+      const verifyMembership = await tx
+        .select()
+        .from(chatroom_members)
+        .where(
+          and(
+            eq(chatroom_members.userId, user[0].id),
+            eq(chatroom_members.chatroomId, invite[0].chatroomId)
+          )
+        );
+
+      console.log(
+        `🔍 Membership verification: Found ${verifyMembership.length} memberships for user ${user[0].id} in chatroom ${invite[0].chatroomId}`
+      );
+
+      // Update invite usage tracking within the same transaction
+      const currentUsedBy = invite[0].usedBy || [];
+      if (!currentUsedBy.includes(user[0].id)) {
+        await tx
+          .update(chatroom_invites)
+          .set({
+            usedBy: [...currentUsedBy, user[0].id],
+          })
+          .where(eq(chatroom_invites.id, invite[0].id));
+      }
+
+      return {
+        membership: newMembership[0],
+        verified: verifyMembership.length > 0,
+      };
+    });
 
     // Get chatroom details for response
     const chatroom = await db
       .select({ name: chatrooms.name })
       .from(chatrooms)
       .where(eq(chatrooms.id, invite[0].chatroomId));
+
+    // Add a small delay to ensure database consistency before responding
+    // This helps prevent race conditions where the frontend tries to load messages
+    // before the membership is fully committed across all database connections
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    console.log(
+      `🎯 Invite processing complete - User ${user[0].id} is now a verified member of chatroom ${invite[0].chatroomId}`
+    );
 
     // Broadcast member join to PartyKit for real-time updates
     try {

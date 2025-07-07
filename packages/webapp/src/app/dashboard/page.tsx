@@ -431,13 +431,88 @@ export default function Dashboard() {
     onMessagesClear,
   });
 
+  // Add retry logic for loading messages
+  const loadMessagesWithRetry = useCallback(
+    async (chatroomId: string, retryCount = 0): Promise<any[]> => {
+      const maxRetries = 3;
+      const retryDelay = 1000; // 1 second
+
+      try {
+        console.log(
+          `📨 Dashboard - Loading initial messages for chatroom ${chatroomId} (attempt ${
+            retryCount + 1
+          })`
+        );
+        const res = await fetch(`/api/chatrooms/${chatroomId}/messages`);
+        console.log(
+          `📨 Dashboard - Messages API response status: ${res.status}`
+        );
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error(`❌ Dashboard - Messages API error:`, errorData);
+
+          // If the error is "Not a member" and we haven't exhausted retries, wait and retry
+          if (
+            errorData.error?.includes("Not a member") &&
+            retryCount < maxRetries
+          ) {
+            console.log(
+              `🔄 Dashboard - Retrying message load in ${retryDelay}ms (attempt ${
+                retryCount + 1
+              }/${maxRetries})`
+            );
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+            return loadMessagesWithRetry(chatroomId, retryCount + 1);
+          }
+
+          throw new Error(errorData.error || "Failed to fetch messages");
+        }
+
+        const data = await res.json();
+        console.log(
+          `📨 Dashboard - Received ${
+            data.messages?.length || 0
+          } initial messages`
+        );
+        return data.messages || [];
+      } catch (error) {
+        console.error(`❌ Dashboard - Error loading messages:`, error);
+
+        // If we haven't exhausted retries and it's a network/server error, retry
+        if (
+          retryCount < maxRetries &&
+          !(error as Error).message.includes("Not a member")
+        ) {
+          console.log(
+            `🔄 Dashboard - Retrying message load in ${retryDelay}ms due to error (attempt ${
+              retryCount + 1
+            }/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          return loadMessagesWithRetry(chatroomId, retryCount + 1);
+        }
+
+        return [];
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!selectedChatroomId) return;
-    fetch(`/api/chatrooms/${selectedChatroomId}/messages`)
-      .then((res) => res.json())
-      .then((data) => setInitialMessages(data.messages || []));
+
+    loadMessagesWithRetry(selectedChatroomId)
+      .then((messages) => {
+        setInitialMessages(messages);
+      })
+      .catch((error) => {
+        console.error(`❌ Dashboard - Final error loading messages:`, error);
+        setInitialMessages([]);
+      });
+
     setNotifications([]);
-  }, [selectedChatroomId]);
+  }, [selectedChatroomId, loadMessagesWithRetry]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
