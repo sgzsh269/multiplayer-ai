@@ -145,7 +145,15 @@ export async function PATCH(
       } else {
         // Determine what was actually updated for better notifications
         const updatedFields: any = {};
-        if (aiMode !== undefined) updatedFields.aiMode = true;
+        
+        // Track the original user intent for better notifications
+        if (aiMode !== undefined) {
+          if (aiMode === "disabled") {
+            updatedFields.aiDisabled = true; // Special flag for disabled state
+          } else {
+            updatedFields.aiMode = true; // Regular mode change
+          }
+        }
         if (aiEnabled !== undefined) updatedFields.aiEnabled = true;
         if (aiSystemMessage !== undefined) updatedFields.aiSystemMessage = true;
 

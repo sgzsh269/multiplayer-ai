@@ -33,6 +33,7 @@ export interface SettingsUpdateMessage {
     aiMode?: boolean;
     aiEnabled?: boolean;
     aiSystemMessage?: boolean;
+    aiDisabled?: boolean;
   };
   timestamp: number;
   updatedBy: {

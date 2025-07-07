@@ -187,6 +187,12 @@ export default class Server implements Party.Server {
             aiMode: string;
             aiEnabled: boolean;
           };
+          updatedFields?: {
+            aiMode?: boolean;
+            aiEnabled?: boolean;
+            aiSystemMessage?: boolean;
+            aiDisabled?: boolean;
+          };
           chatroomId: string;
           timestamp?: number;
           updatedBy: {
@@ -213,6 +219,7 @@ export default class Server implements Party.Server {
           JSON.stringify({
             type: "settings-update",
             settings: body.settings,
+            updatedFields: body.updatedFields,
             timestamp: body.timestamp || Date.now(),
             updatedBy: body.updatedBy,
             roomId: body.chatroomId,

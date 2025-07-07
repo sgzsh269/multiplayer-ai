@@ -370,6 +370,9 @@ export default function Dashboard() {
       if (update.updatedFields?.aiSystemMessage) {
         // This was specifically a behavior update
         content = "AI Behavior updated";
+      } else if (update.updatedFields?.aiDisabled) {
+        // This was specifically a disable action
+        content = "AI disabled";
       } else if (update.updatedFields?.aiMode) {
         // This was specifically a mode change
         const modeDisplay =
