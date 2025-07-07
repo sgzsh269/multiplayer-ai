@@ -1161,7 +1161,7 @@ export default function Dashboard() {
                           className="flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
-                            <div className="avatar w-4 h-4 bg-green-700 flex items-center justify-center text-xs text-white font-medium">
+                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
                               {getAvatarInitials(
                                 participant.user?.firstName,
                                 participant.user?.lastName,
