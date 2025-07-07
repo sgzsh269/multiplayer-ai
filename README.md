@@ -15,11 +15,13 @@ This app is a multiplayer chat app that allows users to form groups and collabor
 
 Project is a monorepo with the following key directories:
 
-* `/packages/webapp/` - Frontend and Backend
-* `/packages/party/` - PartyKit multiplayer server
-* `/docker/` - Docker compose files for postgres db and other services
-* `/ai-ref/` - Project reference files for AI coding assistants
-* `/.cursor/` - Cursor rules
+* `/packages/webapp` - Frontend and Backend
+* `/packages/party` - PartyKit multiplayer server
+* `/docker` - Docker compose files for postgres db and other services
+* `/ai-ref` - Docs for AI coding agents
+   * `/external-docs` - External API/SDK docs
+   * `/project-docs` - Project spec and task planning docs
+* `/.cursor` - Cursor rules
 
 ## Quick Start
 
