@@ -5,7 +5,13 @@ alwaysApply: true
 ---
 
 # Project structure
-- The project is a monorepo with all apps and internal libs in package directory
+Project is a monorepo with the following key directories:
+
+* `/packages/webapp/` - Frontend and Backend
+* `/packages/party/` - PartyKit multiplayer server
+* `/docker/` - Docker compose files for postgres db and other services
+* `/ai-ref/` - Project reference files for AI coding assistants
+* `/.cursor/` - Cursor rules
 
 # Frameworks/Libs   
 - Always use `Typescript` as the programming language
@@ -19,13 +25,11 @@ alwaysApply: true
 - Use `Shadcn` for UI frameowrk and components, refer to docs [shadcn-docs.md](mdc:ai-ref/external-docs/shadcn-docs.md)
 - Use `PartyKit` for real-time collaborative workflows and message, refer to docs [partykit-docs.md](mdc:ai-ref/external-docs/partykit-docs.md)
 
-# Dev Process
-- When using any framework/lib, first check if its installed
+# Instructions
+- Use [project-spec.md](mdc:ai-ref/project-docs/project-spec.md) as project requirements doc
+- Use [project-plan.md](mdc:ai-ref/project-docs/project-plan.md) as live planning doc to create, update and track implementation of various functionalities 
+- Feel free to ask follow up clarifying questions for better understanding if something in the user request, plan, spec is unclear, vague or ambigious 
 - Use `Playwright` MCP for using browser to validate changes that affect UI and integration with backend
 - Use `Postgres` MCP server to check schemas and validate migration
-- Always use [project-spec.md](mdc:ai-ref/project-docs/project-spec.md) to understand the overall project requirements 
-- Always use [project-plan.md](mdc:ai-ref/project-docs/project-plan.md) as JIRA to create, update and track implementation of various functionalities 
-- Feel free to ask follow up clarifying questions for better understanding if something in the user request, plan, spec is unclear, vague or ambigious 
 - Do not re-run the dev server as hot-reloading is active
-- Commit code after every task in the plan doc is completed
-- If you continously run into issues for a problem you are trying to fix, just search the web for a possible solution
+- If you continously run into issues for a bug you are trying to fix, just search the web for a possible solution

@@ -14,25 +14,45 @@ export default class Server implements Party.Server {
   >();
   private readonly TYPING_TIMEOUT = 6000; // 6 seconds before auto-clearing typing status
 
+  // Environment configuration - centralized access to all env vars
+  private readonly env = {
+    SHARED_PARTYKIT_BACKEND_API_KEY:
+      process.env.SHARED_PARTYKIT_BACKEND_API_KEY,
+    CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+  } as const;
+
   constructor(readonly room: Party.Room) {}
+
+  /**
+   * Validates API key authentication for backend requests
+   * @param req The incoming request
+   * @returns Response object if authentication fails, null if successful
+   */
+  private validateApiAuth(req: Party.Request): Response | null {
+    if (!this.env.SHARED_PARTYKIT_BACKEND_API_KEY) {
+      console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
+      return new Response("Server configuration error", { status: 500 });
+    }
+
+    const authHeader = req.headers.get("authorization");
+    if (
+      !authHeader ||
+      authHeader !== `Bearer ${this.env.SHARED_PARTYKIT_BACKEND_API_KEY}`
+    ) {
+      console.warn("Unauthorized API request attempt");
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    return null; // Authentication successful
+  }
 
   async onRequest(req: Party.Request) {
     // Handle AI message broadcasts from backend
     if (req.method === "POST" && req.url.includes("/ai-message")) {
       try {
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized AI message broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         // Rate limiting for AI messages
         const now = Date.now();
@@ -103,18 +123,8 @@ export default class Server implements Party.Server {
         console.log("🔄 Received AI stream request");
 
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized AI stream broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as {
           type: "token" | "start" | "complete";
@@ -169,18 +179,8 @@ export default class Server implements Party.Server {
     if (req.method === "POST" && req.url.includes("/settings-update")) {
       try {
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized settings update broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as {
           settings: {
@@ -233,18 +233,8 @@ export default class Server implements Party.Server {
     if (req.method === "POST" && req.url.includes("/member-event")) {
       try {
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized member event broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as {
           type: "member-joined" | "member-removed";
@@ -292,18 +282,8 @@ export default class Server implements Party.Server {
     if (req.method === "POST" && req.url.includes("/user-message")) {
       try {
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized user message broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as {
           type: "chat-message";
@@ -349,18 +329,8 @@ export default class Server implements Party.Server {
     if (req.method === "POST" && req.url.includes("/messages-cleared")) {
       try {
         // Verify API key authentication
-        const authHeader = req.headers.get("authorization");
-        const expectedApiKey = process.env.SHARED_PARTYKIT_BACKEND_API_KEY;
-
-        if (!expectedApiKey) {
-          console.error("SHARED_PARTYKIT_BACKEND_API_KEY not configured");
-          return new Response("Server configuration error", { status: 500 });
-        }
-
-        if (!authHeader || authHeader !== `Bearer ${expectedApiKey}`) {
-          console.warn("Unauthorized messages cleared broadcast attempt");
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const authError = this.validateApiAuth(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as {
           type: "messages-cleared";
@@ -429,7 +399,7 @@ export default class Server implements Party.Server {
     }
     try {
       const session = await verifyToken(token, {
-        secretKey: process.env.CLERK_SECRET_KEY!,
+        secretKey: this.env.CLERK_SECRET_KEY!,
       }); // TODO: move secret to env config
       // Attach user info to connection for later use
       (conn as any).clerkUser = session;
@@ -463,7 +433,7 @@ export default class Server implements Party.Server {
     }
     try {
       const session = await verifyToken(token, {
-        secretKey: process.env.CLERK_SECRET_KEY!,
+        secretKey: this.env.CLERK_SECRET_KEY!,
       }); // TODO: move secret to env config
 
       // Handle typing events
