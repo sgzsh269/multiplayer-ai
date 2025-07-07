@@ -1,9 +1,13 @@
 {
-  "name": "proj-one",
-  "dependencies": {
-    "@radix-ui/react-separator": "^1.1.7"
+  "name": "multiplayer-ai",
+  "scripts": {
+    "dev": "bun run --filter webapp --filter party dev",
+    "dev:webapp": "bun run --filter webapp dev",
+    "dev:party": "bun run --filter party dev"
   },
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "devDependencies": {
     "@biomejs/biome": "2.0.6",
     "@types/bun": "^1.2.17"
