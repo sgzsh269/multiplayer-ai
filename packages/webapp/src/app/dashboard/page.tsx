@@ -376,7 +376,7 @@ export default function Dashboard() {
           update.settings.aiMode === "auto-respond"
             ? "Auto Respond"
             : update.settings.aiMode === "summoned"
-            ? "Summoned Only"
+            ? "Summoned"
             : "Disabled";
         content = `AI Mode changed to ${modeDisplay}`;
       } else if (update.updatedFields?.aiEnabled) {
@@ -731,7 +731,7 @@ export default function Dashboard() {
               }`}
             >
               <div className="text-xs font-medium truncate">
-                {chatroom.name}
+                #{chatroom.name}
               </div>
             </div>
           ))}
@@ -807,7 +807,7 @@ export default function Dashboard() {
             <div className="p-2 border-b border-neutral-200">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-medium text-neutral-900">
-                  {selectedChatroom.name}
+                  #{selectedChatroom.name}
                 </div>
                 {isCurrentUserAdmin && (
                   <div className="flex gap-2">
@@ -1197,7 +1197,7 @@ export default function Dashboard() {
                   className="w-full p-1 text-xs border border-neutral-200 focus:border-green-700 outline-none"
                 >
                   <option value="auto-respond">Auto Respond</option>
-                  <option value="summoned">Summoned Only</option>
+                  <option value="summoned">Summoned (Use @AI)</option>
                   <option value="disabled">Disabled</option>
                 </select>
               </div>

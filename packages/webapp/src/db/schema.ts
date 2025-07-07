@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   uuid,
   jsonb,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -23,7 +24,9 @@ export const chatrooms = pgTable("chatrooms", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   isPrivate: text("is_private").default("0"), // Changed from integer to text for consistency
-  createdBy: uuid("created_by").notNull(),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // AI Assistant settings
   aiMode: text("ai_mode").default("auto-respond").notNull(), // "auto-respond" or "summoned"
@@ -35,11 +38,15 @@ export const chatrooms = pgTable("chatrooms", {
 
 export const messages = pgTable("messages", {
   id: uuid("id").defaultRandom().primaryKey(),
-  chatroomId: uuid("chatroom_id").notNull(),
-  userId: uuid("user_id"), // null for AI messages
+  chatroomId: uuid("chatroom_id")
+    .notNull()
+    .references(() => chatrooms.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // null for AI messages
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  parentId: uuid("parent_id"), // for threaded replies
+  parentId: uuid("parent_id").references((): AnyPgColumn => messages.id, {
+    onDelete: "cascade",
+  }), // for threaded replies
   // AI message metadata
   isAiMessage: boolean("is_ai_message").default(false).notNull(),
   aiModel: text("ai_model"), // which AI model was used
@@ -47,8 +54,12 @@ export const messages = pgTable("messages", {
 
 export const files = pgTable("files", {
   id: uuid("id").defaultRandom().primaryKey(),
-  chatroomId: uuid("chatroom_id").notNull(),
-  userId: uuid("user_id").notNull(),
+  chatroomId: uuid("chatroom_id")
+    .notNull()
+    .references(() => chatrooms.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   fileName: text("file_name").notNull(),
   fileType: text("file_type").notNull(),
   fileUrl: text("file_url").notNull(),
@@ -59,8 +70,12 @@ export const chatroom_members = pgTable(
   "chatroom_members",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull(),
-    chatroomId: uuid("chatroom_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatroomId: uuid("chatroom_id")
+      .notNull()
+      .references(() => chatrooms.id, { onDelete: "cascade" }),
     role: text("role").notNull(), // e.g., admin, guest
   },
   (table) => [
@@ -70,8 +85,12 @@ export const chatroom_members = pgTable(
 
 export const chatroom_invites = pgTable("chatroom_invites", {
   id: uuid("id").defaultRandom().primaryKey(),
-  chatroomId: uuid("chatroom_id").notNull(),
-  createdBy: uuid("created_by").notNull(), // User who created the invite
+  chatroomId: uuid("chatroom_id")
+    .notNull()
+    .references(() => chatrooms.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }), // User who created the invite
   inviteCode: text("invite_code").notNull().unique(), // Short unique code for the invite URL
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

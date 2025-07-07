@@ -1,6 +1,6 @@
 # Multiplayer AI
 
-This app is a multiplayer chat app that allows users to form groups and collaboratively interact with AI assistants in real-time. The app's goal is to facilitate collaborative learning, brainstorming, research, and decision-making through a conversational interface. 
+This is a multiplayer chat app that allows users to form chatrooms and collaboratively interact with AI assistants in real-time. The app's goal is to facilitate collaborative learning, brainstorming, research, and decision-making through a conversational interface. 
 
 ## Tech Stack
 
@@ -69,6 +69,7 @@ Project is a monorepo with the following key directories:
 - File and image queries
 - Tool calling and MCP
 - Multiple AI assistants in a chatroom
+- Mobile-friendly UI/UX
 
 ## Contributing
 

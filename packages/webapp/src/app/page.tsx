@@ -31,7 +31,7 @@ export default function LandingPage() {
               <Brain className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm font-medium text-neutral-900">
-              AI Playground
+              Multiplayer AI
             </span>
           </div>
           <nav className="hidden md:flex items-center space-x-4">
