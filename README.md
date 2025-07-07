@@ -14,7 +14,6 @@ This is a multiplayer chat app that allows users to form chatrooms and collabora
 ## Project Structure
 
 Project is a monorepo with the following key directories:
-
 * `/packages/webapp` - Frontend and Backend
 * `/packages/party` - PartyKit multiplayer server
 * `/docker` - Docker compose files for postgres db and other services

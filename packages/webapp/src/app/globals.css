@@ -57,8 +57,8 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-size: 13px;
-    line-height: 1.4;
+    font-size: 16px;
+    line-height: 1.5;
     font-family: ui-sans-serif, system-ui, sans-serif;
   }
 }
@@ -72,11 +72,11 @@
 
 /* Specific styling for small member list avatars */
 .avatar.w-4.h-4 {
-  min-width: 20px !important;
-  min-height: 20px !important;
-  width: 20px !important;
-  height: 20px !important;
-  font-size: 10px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 12px !important;
   line-height: 1 !important;
 }
 
@@ -270,7 +270,7 @@ select:focus {
   width: 100% !important;
   border-collapse: collapse !important;
   margin: 8px 0 !important;
-  font-size: 11px !important;
+  font-size: 14px !important;
 }
 
 .prose table th,

@@ -26,14 +26,14 @@ export default function LandingPage() {
             <div className="w-6 h-6 bg-green-700 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-medium text-neutral-900">
+            <span className="text-base font-medium text-neutral-900">
               Multiplayer AI
             </span>
           </div>
           <nav className="hidden md:flex items-center space-x-4">
             <a
               href="#features"
-              className="text-xs text-neutral-600 hover:text-neutral-900"
+              className="text-sm text-neutral-600 hover:text-neutral-900"
             >
               Features
             </a>
@@ -41,14 +41,14 @@ export default function LandingPage() {
               asChild
               variant="outline"
               size="sm"
-              className="text-xs px-2 py-1"
+              className="text-sm px-2 py-1"
             >
               <Link href="/sign-in">Sign In</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="bg-green-700 hover:bg-green-800 text-white text-xs px-2 py-1"
+              className="bg-green-700 hover:bg-green-800 text-white text-sm px-2 py-1"
             >
               <Link href="/sign-up">Get Started</Link>
             </Button>
@@ -63,7 +63,7 @@ export default function LandingPage() {
             <h2 className="text-xl font-medium text-neutral-900 mb-2">
               Powerful Collaborative Features
             </h2>
-            <p className="text-sm text-neutral-600 max-w-xl mx-auto">
+            <p className="text-base text-neutral-600 max-w-xl mx-auto">
               Everything your team needs to work together with AI effectively
             </p>
           </div>
@@ -74,10 +74,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-green-100 flex items-center justify-center mb-2">
                   <Users className="w-4 h-4 text-green-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   Real-Time Collaboration
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   Multiple users can interact with AI simultaneously, seeing
                   each other's contributions in real-time
                 </CardDescription>
@@ -89,10 +89,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-blue-100 flex items-center justify-center mb-2">
                   <Upload className="w-4 h-4 text-blue-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   File & Image Uploads
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   Seamlessly share and reference documents, images, and other
                   files within your collaborative sessions
                 </CardDescription>
@@ -104,10 +104,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-indigo-100 flex items-center justify-center mb-2">
                   <Globe className="w-4 h-4 text-indigo-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   Real-Time Data Access
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   AI can access external APIs and real-time data sources to
                   provide up-to-date information
                 </CardDescription>
@@ -119,10 +119,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-orange-100 flex items-center justify-center mb-2">
                   <MessageSquare className="w-4 h-4 text-orange-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   Conversational Interface
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   Intuitive chat-based interaction that feels natural and
                   encourages team participation
                 </CardDescription>
@@ -134,10 +134,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-red-100 flex items-center justify-center mb-2">
                   <Shield className="w-4 h-4 text-red-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   Secure & Private
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   Enterprise-grade security ensures your team's conversations
                   and data remain protected
                 </CardDescription>
@@ -149,10 +149,10 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-purple-100 flex items-center justify-center mb-2">
                   <Zap className="w-4 h-4 text-purple-700" />
                 </div>
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-base font-medium">
                   Advanced AI Tools
                 </CardTitle>
-                <CardDescription className="text-xs text-neutral-600">
+                <CardDescription className="text-sm text-neutral-600">
                   Access to cutting-edge AI models and specialized tools for
                   research, analysis, and creativity
                 </CardDescription>

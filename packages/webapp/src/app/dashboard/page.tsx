@@ -742,7 +742,7 @@ export default function Dashboard() {
               `}
               />
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-neutral-900">
+                <div className="text-sm font-medium text-neutral-900">
                   {notification.type === "member-joined"
                     ? "Member Joined"
                     : notification.type === "member-removed"
@@ -751,7 +751,7 @@ export default function Dashboard() {
                     ? "Settings Updated"
                     : "Messages Cleared"}
                 </div>
-                <div className="text-xs text-neutral-600 mt-0.5">
+                <div className="text-sm text-neutral-600 mt-0.5">
                   {notification.content}
                 </div>
               </div>
@@ -793,7 +793,7 @@ export default function Dashboard() {
       <div className="w-48 bg-neutral-50 border-r border-neutral-200 flex flex-col">
         {/* Header */}
         <div className="p-2 border-b border-neutral-200">
-          <div className="text-xs font-medium text-neutral-900">CHATROOMS</div>
+          <div className="text-sm font-medium text-neutral-900">CHATROOMS</div>
         </div>
 
         {/* Chatroom List */}
@@ -808,7 +808,7 @@ export default function Dashboard() {
                   : "hover:bg-neutral-100"
               }`}
             >
-              <div className="text-xs font-medium truncate">
+              <div className="text-sm font-medium truncate">
                 #{chatroom.name}
               </div>
             </div>
@@ -819,14 +819,14 @@ export default function Dashboard() {
         <div className="p-2 border-t border-neutral-200 space-y-1">
           <button
             onClick={() => setIsCreateChatroomOpen(true)}
-            className="w-full p-1 text-xs text-white hover:bg-green-800"
+            className="w-full p-1 text-sm text-white hover:bg-green-800"
             style={{ backgroundColor: "#15803d" }}
           >
             CREATE ROOM
           </button>
           <button
             onClick={() => setIsJoinChatroomOpen(true)}
-            className="w-full p-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+            className="w-full p-1 text-sm bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
           >
             JOIN ROOM
           </button>
@@ -837,7 +837,7 @@ export default function Dashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 w-full hover:bg-neutral-100 p-1 rounded">
-                <div className="avatar w-6 h-6 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
+                <div className="avatar w-6 h-6 bg-neutral-400 flex items-center justify-center text-sm text-white font-medium">
                   {getAvatarInitials(
                     user?.firstName,
                     user?.lastName,
@@ -845,7 +845,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-neutral-900 truncate">
+                  <div className="text-sm font-medium text-neutral-900 truncate">
                     {user?.firstName} {user?.lastName}
                   </div>
                 </div>
@@ -884,20 +884,20 @@ export default function Dashboard() {
             {/* Chat Header */}
             <div className="p-2 border-b border-neutral-200">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-neutral-900">
+                <div className="text-sm font-medium text-neutral-900">
                   #{selectedChatroom.name}
                 </div>
                 {isCurrentUserAdmin && (
                   <div className="flex gap-2">
                     <button
                       onClick={handleShareInvite}
-                      className="px-2 py-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+                      className="px-2 py-1 text-sm bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
                     >
                       {linkCopied ? "COPIED" : "SHARE INVITE"}
                     </button>
                     <button
                       onClick={() => setIsClearMessagesOpen(true)}
-                      className="px-2 py-1 text-xs bg-red-100 text-red-700 hover:bg-red-200"
+                      className="px-2 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200"
                     >
                       CLEAR MESSAGES
                     </button>
@@ -950,7 +950,7 @@ export default function Dashboard() {
                 if (sortedMessages.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-full">
-                      <div className="text-neutral-500 text-xs">
+                      <div className="text-neutral-500 text-sm">
                         No messages
                       </div>
                     </div>
@@ -980,7 +980,7 @@ export default function Dashboard() {
                       className="flex gap-2 mb-3"
                     >
                       <div
-                        className={`avatar w-6 h-6 flex items-center justify-center text-xs text-white font-medium flex-shrink-0 ${
+                        className={`avatar w-6 h-6 flex items-center justify-center text-sm text-white font-medium flex-shrink-0 ${
                           isAi ? "bg-green-700" : "bg-neutral-400"
                         }`}
                       >
@@ -994,10 +994,10 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xs font-medium text-neutral-900">
+                          <span className="text-sm font-medium text-neutral-900">
                             {userName}
                           </span>
-                          <span className="text-xs text-neutral-500">
+                          <span className="text-sm text-neutral-500">
                             {new Date(
                               message.createdAt || message.sentAt || Date.now()
                             ).toLocaleTimeString([], {
@@ -1006,9 +1006,9 @@ export default function Dashboard() {
                             })}
                           </span>
                         </div>
-                        <div className="text-xs text-neutral-700 break-words">
+                        <div className="text-sm text-neutral-700 break-words">
                           {isAi ? (
-                            <div className="prose prose-xs max-w-none text-xs">
+                            <div className="prose prose-sm max-w-none text-sm">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {message.content || message.text}
                               </ReactMarkdown>
@@ -1025,23 +1025,23 @@ export default function Dashboard() {
 
               {partyStreamingMessage?.isActive && (
                 <div className="flex gap-2 mb-3">
-                  <div className="avatar w-6 h-6 bg-green-700 flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
+                  <div className="avatar w-6 h-6 bg-green-700 flex items-center justify-center text-sm text-white font-medium flex-shrink-0">
                     AI
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xs font-medium text-neutral-900">
+                      <span className="text-sm font-medium text-neutral-900">
                         AI
                       </span>
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-sm text-neutral-500">
                         {partyStreamingMessage.content
                           ? "responding..."
                           : "thinking..."}
                       </span>
                     </div>
                     {partyStreamingMessage.content && (
-                      <div className="text-xs text-neutral-700 break-words">
-                        <div className="prose prose-xs max-w-none text-xs">
+                      <div className="text-sm text-neutral-700 break-words">
+                        <div className="prose prose-sm max-w-none text-sm">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {partyStreamingMessage.content}
                           </ReactMarkdown>
@@ -1069,12 +1069,12 @@ export default function Dashboard() {
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 p-1 text-xs border border-neutral-200 focus:border-green-700 outline-none"
+                  className="flex-1 p-1 text-sm border border-neutral-200 focus:border-green-700 outline-none"
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim()}
-                  className="px-2 py-1 text-xs bg-green-700 text-white hover:bg-green-800 disabled:bg-neutral-200 disabled:text-neutral-500"
+                  className="px-2 py-1 text-sm bg-green-700 text-white hover:bg-green-800 disabled:bg-neutral-200 disabled:text-neutral-500"
                 >
                   SEND
                 </button>
@@ -1084,11 +1084,11 @@ export default function Dashboard() {
               <div className="h-6 flex items-center">
                 {typingUsers.size > 0 && (
                   <div className="flex gap-2 items-center px-1">
-                    <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
+                    <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-sm text-white font-medium flex-shrink-0">
                       <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-neutral-600">
+                      <span className="text-sm text-neutral-600">
                         {Array.from(typingUsers.values()).length === 1
                           ? `${Array.from(typingUsers.values())[0]} is typing`
                           : Array.from(typingUsers.values()).length === 2
@@ -1123,7 +1123,7 @@ export default function Dashboard() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-xs text-neutral-500">
+            <div className="text-sm text-neutral-500">
               Select a chatroom to start messaging
             </div>
           </div>
@@ -1135,7 +1135,7 @@ export default function Dashboard() {
         <div className="w-48 bg-neutral-50 border-l border-neutral-200 flex flex-col">
           {/* Members Section */}
           <div className="p-2 border-b border-neutral-200">
-            <div className="text-xs font-medium text-neutral-900">
+            <div className="text-sm font-medium text-neutral-900">
               MEMBERS ({participants.length})
             </div>
           </div>
@@ -1152,7 +1152,7 @@ export default function Dashboard() {
                 <>
                   {admins.length > 0 && (
                     <>
-                      <div className="text-xs font-medium text-neutral-500 px-1 pt-1">
+                      <div className="text-sm font-medium text-neutral-500 px-1 pt-1">
                         ADMINS ({admins.length})
                       </div>
                       {admins.map((participant: any) => (
@@ -1161,14 +1161,14 @@ export default function Dashboard() {
                           className="flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
-                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
+                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-sm text-white font-medium">
                               {getAvatarInitials(
                                 participant.user?.firstName,
                                 participant.user?.lastName,
                                 "U"
                               )}
                             </div>
-                            <div className="text-xs text-neutral-700 truncate">
+                            <div className="text-sm text-neutral-700 truncate">
                               {participant.user?.firstName}{" "}
                               {participant.user?.lastName}
                             </div>
@@ -1200,7 +1200,7 @@ export default function Dashboard() {
                       {admins.length > 0 && (
                         <div className="border-t border-neutral-200 my-2" />
                       )}
-                      <div className="text-xs font-medium text-neutral-500 px-1 pt-1">
+                      <div className="text-sm font-medium text-neutral-500 px-1 pt-1">
                         MEMBERS ({members.length})
                       </div>
                       {members.map((participant: any) => (
@@ -1209,14 +1209,14 @@ export default function Dashboard() {
                           className="flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
-                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-xs text-white font-medium">
+                            <div className="avatar w-4 h-4 bg-neutral-400 flex items-center justify-center text-sm text-white font-medium">
                               {getAvatarInitials(
                                 participant.user?.firstName,
                                 participant.user?.lastName,
                                 "U"
                               )}
                             </div>
-                            <div className="text-xs text-neutral-700 truncate">
+                            <div className="text-sm text-neutral-700 truncate">
                               {participant.user?.firstName}{" "}
                               {participant.user?.lastName}
                             </div>
@@ -1250,13 +1250,13 @@ export default function Dashboard() {
           {/* AI Settings Section */}
           <div className="border-t border-neutral-200">
             <div className="p-2 border-b border-neutral-200">
-              <div className="text-xs font-medium text-neutral-900">
+              <div className="text-sm font-medium text-neutral-900">
                 AI SETTINGS
               </div>
             </div>
             <div className="p-2 space-y-2">
               <div>
-                <label className="text-xs text-neutral-600 block mb-1">
+                <label className="text-sm text-neutral-600 block mb-1">
                   AI Mode
                 </label>
                 <select
@@ -1272,7 +1272,7 @@ export default function Dashboard() {
                       settings: { aiMode: e.target.value },
                     });
                   }}
-                  className="w-full p-1 text-xs border border-neutral-200 focus:border-green-700 outline-none"
+                  className="w-full p-1 text-sm border border-neutral-200 focus:border-green-700 outline-none"
                 >
                   <option value="auto-respond">Auto Respond</option>
                   <option value="summoned">Summoned (Use @AI)</option>
@@ -1281,7 +1281,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => setIsAiSettingsOpen(true)}
-                className="w-full p-1 text-xs bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
+                className="w-full p-1 text-sm bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
               >
                 CHANGE AI BEHAVIOR
               </button>
@@ -1302,10 +1302,10 @@ export default function Dashboard() {
           placeholder="Room name"
           value={newChatroomName}
           onChange={(e) => setNewChatroomName(e.target.value)}
-          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none rounded"
+          className="w-full p-2 text-sm border border-neutral-200 focus:border-green-700 outline-none rounded"
         />
         {createError && (
-          <div className="text-red-600 text-xs mt-2">{createError}</div>
+          <div className="text-red-600 text-sm mt-2">{createError}</div>
         )}
         <ModalFooter>
           <ModalButton
@@ -1336,10 +1336,10 @@ export default function Dashboard() {
           placeholder="Invitation link or code"
           value={joinId}
           onChange={(e) => setJoinId(e.target.value)}
-          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none rounded"
+          className="w-full p-2 text-sm border border-neutral-200 focus:border-green-700 outline-none rounded"
         />
         {joinError && (
-          <div className="text-red-600 text-xs mt-2">{joinError}</div>
+          <div className="text-red-600 text-sm mt-2">{joinError}</div>
         )}
         <ModalFooter>
           <ModalButton
@@ -1365,7 +1365,7 @@ export default function Dashboard() {
         title="Clear Messages"
         size="sm"
       >
-        <div className="text-xs text-neutral-600">
+        <div className="text-sm text-neutral-600">
           This will delete all messages permanently.
         </div>
         <ModalFooter>
@@ -1392,7 +1392,7 @@ export default function Dashboard() {
         title="Remove Member"
         size="sm"
       >
-        <div className="text-xs text-neutral-600">
+        <div className="text-sm text-neutral-600">
           Are you sure you want to remove{" "}
           <strong>{removeMemberDialog.member?.name}</strong> from this chatroom?
         </div>
@@ -1434,7 +1434,7 @@ export default function Dashboard() {
           value={aiSystemMessage}
           onChange={(e) => setAiSystemMessage(e.target.value)}
           rows={6}
-          className="w-full p-2 text-xs border border-neutral-200 focus:border-green-700 outline-none resize-none rounded"
+          className="w-full p-2 text-sm border border-neutral-200 focus:border-green-700 outline-none resize-none rounded"
         />
         <ModalFooter>
           <ModalButton
