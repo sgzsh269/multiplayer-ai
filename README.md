@@ -1,6 +1,6 @@
 # Multiplayer AI
 
-This is a multiplayer chat app that allows users to form chatrooms and collaboratively interact with AI assistants in real-time. The app's goal is to facilitate collaborative learning, brainstorming, research, and decision-making through a conversational interface. 
+This is an AI-powered group chat app that allows users to form chatrooms and collaboratively interact with AI assistants in real-time. The app's goal is to facilitate collaborative learning, brainstorming, research, and decision-making through a conversational interface. 
 
 ## Tech Stack
 
