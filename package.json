@@ -1,0 +1,16 @@
+{
+  "name": "multiplayer-ai",
+  "scripts": {
+    "dev": "bun run --filter webapp --filter party dev",
+    "dev:webapp": "bun run --filter webapp dev",
+    "dev:party": "bun run --filter party dev",
+    "db:migrate": "bun run --filter webapp db:migrate"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "2.0.6",
+    "@types/bun": "^1.2.17"
+  }
+}

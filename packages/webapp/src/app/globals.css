@@ -1,0 +1,305 @@
+@import "tailwindcss";
+
+@layer theme {
+  :root {
+    --background: #fafafa;
+    --foreground: #171717;
+    --card: #ffffff;
+    --card-foreground: #171717;
+    --popover: #ffffff;
+    --popover-foreground: #171717;
+    --primary: #15803d;
+    --primary-foreground: #ffffff;
+    --secondary: #f5f5f5;
+    --secondary-foreground: #171717;
+    --muted: #f5f5f5;
+    --muted-foreground: #737373;
+    --accent: #e5e5e5;
+    --accent-foreground: #171717;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e5e5e5;
+    --input: #ffffff;
+    --ring: #15803d;
+    --radius: 0rem;
+  }
+
+  .dark {
+    --background: #171717;
+    --foreground: #fafafa;
+    --card: #262626;
+    --card-foreground: #fafafa;
+    --popover: #262626;
+    --popover-foreground: #fafafa;
+    --primary: #15803d;
+    --primary-foreground: #ffffff;
+    --secondary: #404040;
+    --secondary-foreground: #fafafa;
+    --muted: #404040;
+    --muted-foreground: #a3a3a3;
+    --accent: #404040;
+    --accent-foreground: #fafafa;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: #404040;
+    --input: #404040;
+    --ring: #15803d;
+  }
+}
+
+@layer base {
+  *:not(.avatar):not([class*="avatar"]) {
+    border-color: var(--border);
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-size: 16px;
+    line-height: 1.5;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Avatar styles - rounded corners */
+.avatar,
+[class*="avatar"] {
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+/* Specific styling for small member list avatars */
+.avatar.w-4.h-4 {
+  min-width: 24px !important;
+  min-height: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+/* Custom modal overlay */
+[data-overlay] {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Custom modal content */
+[data-content] {
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Remove all animations and transitions */
+*,
+*::before,
+*::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Minimal focus styles */
+*:focus {
+  outline: 1px solid var(--primary) !important;
+  outline-offset: 0px !important;
+}
+
+/* Clean button styles */
+button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Clean input styles */
+input,
+textarea,
+select {
+  border: 1px solid var(--border);
+  background: var(--input);
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 1px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+/* Dropdown menu styles */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+[data-slot="dropdown-menu-content"] {
+  background-color: #fafafa !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  padding: 4px !important;
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+[data-slot="dropdown-menu-item"] {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+[data-slot="dropdown-menu-item"]:hover {
+  background-color: var(--accent) !important;
+}
+
+[data-slot="dropdown-menu-separator"] {
+  height: 1px !important;
+  background-color: var(--border) !important;
+  margin: 4px 0 !important;
+}
+
+/* Ensure dropdown menu trigger has proper positioning context */
+[data-slot="dropdown-menu-trigger"] {
+  position: relative !important;
+}
+
+/* Force dropdown menu to be visible and properly positioned */
+[data-slot="dropdown-menu-content"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Force dropdown menu to appear above profile button */
+[data-slot="dropdown-menu-content"][data-side="top"] {
+  position: fixed !important;
+  bottom: auto !important;
+  top: auto !important;
+  transform: translateY(-100%) !important;
+}
+
+/* Ensure profile section dropdown appears in correct position */
+.p-2.border-t.border-neutral-200.relative [data-slot="dropdown-menu-content"] {
+  position: absolute !important;
+  bottom: 100% !important;
+  right: 0 !important;
+  top: auto !important;
+  left: auto !important;
+  transform: translateY(-5px) !important;
+}
+
+/* Modal button overrides - higher specificity than global button reset */
+.modal-button {
+  border: 0 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  border-radius: 4px !important; /* Override the global border-radius: 0 */
+}
+
+/* Use specific selectors with !important only where needed to override global resets */
+.modal-button.modal-button--primary {
+  background-color: #15803d !important;
+  color: #ffffff !important;
+}
+
+.modal-button.modal-button--primary:hover:not(:disabled) {
+  background-color: #166534 !important;
+}
+
+.modal-button.modal-button--primary:disabled {
+  opacity: 0.5 !important;
+}
+
+.modal-button.modal-button--secondary {
+  background-color: #e5e5e5 !important;
+  color: #171717 !important;
+}
+
+.modal-button.modal-button--secondary:hover:not(:disabled) {
+  background-color: #d4d4d4 !important;
+}
+
+.modal-button.modal-button--secondary:disabled {
+  opacity: 0.5 !important;
+}
+
+.modal-button.modal-button--danger {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.modal-button.modal-button--danger:hover:not(:disabled) {
+  background-color: #dc2626 !important;
+}
+
+.modal-button.modal-button--danger:disabled {
+  opacity: 0.5 !important;
+}
+
+/* Markdown table styles - override global border removal */
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 8px 0 !important;
+  font-size: 14px !important;
+}
+
+.prose table th,
+.prose table td {
+  border: 1px solid var(--border) !important;
+  padding: 4px 8px !important;
+  text-align: left !important;
+  vertical-align: top !important;
+}
+
+.prose table th {
+  background-color: var(--muted) !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+}
+
+.prose table tr:nth-child(even) {
+  background-color: var(--muted) !important;
+}
+
+.prose table tr:nth-child(odd) {
+  background-color: var(--background) !important;
+}
+
+/* Ensure table borders are visible */
+.prose table,
+.prose table th,
+.prose table td {
+  border-style: solid !important;
+  border-width: 1px !important;
+  border-color: var(--border) !important;
+}
