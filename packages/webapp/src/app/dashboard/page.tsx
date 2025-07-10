@@ -841,7 +841,8 @@ export default function Dashboard() {
                   {getAvatarInitials(
                     user?.firstName,
                     user?.lastName,
-                    user?.username?.[0] || "U"
+                    user?.username?.[0] || "U",
+                    user?.username // Pass username as potential fullName
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -989,7 +990,8 @@ export default function Dashboard() {
                           : getAvatarInitials(
                               message.sender?.firstName,
                               message.sender?.lastName,
-                              userName[0]?.toUpperCase() || "U"
+                              userName[0]?.toUpperCase() || "U",
+                              message.sender?.name // Pass sender's name as fullName
                             )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1165,7 +1167,8 @@ export default function Dashboard() {
                               {getAvatarInitials(
                                 participant.user?.firstName,
                                 participant.user?.lastName,
-                                "U"
+                                "U",
+                                (participant.user?.firstName && participant.user?.lastName) ? `${participant.user.firstName} ${participant.user.lastName}` : participant.user?.firstName
                               )}
                             </div>
                             <div className="text-sm text-neutral-700 truncate">
@@ -1213,7 +1216,8 @@ export default function Dashboard() {
                               {getAvatarInitials(
                                 participant.user?.firstName,
                                 participant.user?.lastName,
-                                "U"
+                                "U",
+                                (participant.user?.firstName && participant.user?.lastName) ? `${participant.user.firstName} ${participant.user.lastName}` : participant.user?.firstName
                               )}
                             </div>
                             <div className="text-sm text-neutral-700 truncate">
