@@ -3,10 +3,20 @@ import PartySocket from "partysocket";
 import { useAuth } from "@clerk/nextjs";
 
 export interface PartyMessage {
+  id?: string;
+  content?: string;
+  createdAt?: string | Date;
   type: string;
   text: string;
   sentAt: number;
   user: string;
+  sender?: {
+    id?: string;
+    name?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    avatarUrl?: string | null;
+  };
   senderId?: string;
   userId?: string;
   displayName?: string;
@@ -125,6 +135,7 @@ export function usePartySocket({
   }, [onMessagesClear]);
 
   // Clear messages when chatroom changes to prevent cross-chatroom message leakage
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run on chatroom change only
   useEffect(() => {
     setMessages([]);
     setStreamingAiMessage(null);
@@ -139,7 +150,7 @@ export function usePartySocket({
       const token = await getToken();
       if (!token) return;
       conn = new PartySocket({
-        host: process.env.NEXT_PUBLIC_PARTYKIT_HOST!,
+        host: process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "",
         room: chatroomId,
         query: { token },
       });
