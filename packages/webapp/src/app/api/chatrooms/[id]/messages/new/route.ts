@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/db/client";
-import { messages, users, chatrooms, chatroom_members } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
-import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { auth } from "@clerk/nextjs/server";
+import { streamText } from "ai";
+import { and, desc, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { db } from "@/db/client";
+import { chatroom_members, chatrooms, messages, users } from "@/db/schema";
 
 export async function POST(
   req: NextRequest,
@@ -47,7 +47,7 @@ export async function POST(
   }
 
   // Save the user message
-  let newMessage;
+  let newMessage: typeof messages.$inferSelect;
   try {
     [newMessage] = await db
       .insert(messages)
@@ -79,6 +79,9 @@ export async function POST(
           },
           body: JSON.stringify({
             type: "chat-message",
+            id: newMessage.id,
+            content: content,
+            createdAt: newMessage.createdAt,
             text: content,
             sentAt: Date.now(),
             user:
@@ -90,6 +93,16 @@ export async function POST(
               user[0].firstName && user[0].lastName
                 ? `${user[0].firstName} ${user[0].lastName}`
                 : user[0].firstName || user[0].lastName || "User",
+            sender: {
+              id: user[0].id,
+              name:
+                user[0].firstName && user[0].lastName
+                  ? `${user[0].firstName} ${user[0].lastName}`
+                  : user[0].firstName || user[0].lastName || "User",
+              firstName: user[0].firstName,
+              lastName: user[0].lastName,
+              avatarUrl: user[0].avatarUrl,
+            },
             roomId: chatroomId,
             receivedAt: Date.now(),
           }),
@@ -235,7 +248,7 @@ export async function POST(
         }
       }
       // Save complete AI response to database
-      const aiMessage = await db
+      await db
         .insert(messages)
         .values({
           chatroomId: chatroomId,
