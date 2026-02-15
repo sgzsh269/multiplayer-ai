@@ -37,7 +37,7 @@ export interface SettingsUpdateMessage {
   };
   timestamp: number;
   updatedBy: {
-    id: number;
+    id: string;
     displayName: string;
   };
   roomId: string;
@@ -47,7 +47,7 @@ export interface SettingsUpdateMessage {
 export interface MemberEventMessage {
   type: "member-joined" | "member-removed";
   member: {
-    id: number;
+    id: string;
     name: string;
     role: string;
   };

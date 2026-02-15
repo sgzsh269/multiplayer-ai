@@ -86,8 +86,7 @@ export async function POST(
 
     // Check maxUses if set
     if (invite[0].maxUses && invite[0].usedBy) {
-      const maxUsesNum = parseInt(invite[0].maxUses);
-      if (invite[0].usedBy.length >= maxUsesNum) {
+      if (invite[0].usedBy.length >= invite[0].maxUses) {
         return NextResponse.json(
           { error: "This invite link has reached its usage limit" },
           { status: 400 }

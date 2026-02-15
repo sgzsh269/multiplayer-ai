@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { chatrooms, chatroom_members, users, messages } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { eq, inArray, count } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
+import { z } from "zod";
 
-// TODO: Import db, schema, and Clerk auth utilities
+const createChatroomSchema = z.object({
+  name: z.string().trim().min(1, "Chatroom name is required").max(80),
+  isPrivate: z.boolean().optional().default(false),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -81,14 +85,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, isPrivate = false } = await req.json();
-
-    if (!name || name.trim().length === 0) {
+    const parseResult = createChatroomSchema.safeParse(await req.json());
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "Chatroom name is required" },
+        { error: parseResult.error.issues[0]?.message || "Invalid request" },
         { status: 400 }
       );
     }
+
+    const { name, isPrivate } = parseResult.data;
 
     // Find the user's internal database ID
     const user = await db
@@ -104,9 +109,9 @@ export async function POST(req: NextRequest) {
     const newChatroom = await db
       .insert(chatrooms)
       .values({
-        name: name.trim(),
-        isPrivate: isPrivate ? "1" : "0", // Convert boolean to string
-        createdBy: user[0].id, // UUID
+        name,
+        isPrivate,
+        createdBy: user[0].id,
       })
       .returning();
 

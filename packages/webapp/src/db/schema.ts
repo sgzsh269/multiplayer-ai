@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   uuid,
   jsonb,
+  integer,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -23,7 +24,7 @@ export const users = pgTable("users", {
 export const chatrooms = pgTable("chatrooms", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  isPrivate: text("is_private").default("0"), // Changed from integer to text for consistency
+  isPrivate: boolean("is_private").default(false).notNull(),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -96,5 +97,5 @@ export const chatroom_invites = pgTable("chatroom_invites", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   isActive: boolean("is_active").default(true).notNull(), // Can be deactivated manually
   usedBy: jsonb("used_by").default([]).$type<string[]>(), // Array of user IDs who used this invite
-  maxUses: text("max_uses"), // Optional limit on how many times it can be used (null = unlimited)
+  maxUses: integer("max_uses"), // Optional limit on how many times it can be used (null = unlimited)
 });
